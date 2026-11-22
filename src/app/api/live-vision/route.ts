@@ -1,3 +1,6 @@
+import { IS_CLOUD } from "@/lib/system";
+import { requestFrame, markInput } from "@/lib/liveRelay";
+import { enqueueSatelliteCommand } from "@/lib/satelliteQueue";
 import { NextResponse } from "next/server";
 import { execFile } from "child_process";
 import { promisify } from "util";
@@ -20,6 +23,24 @@ export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const source = (url.searchParams.get("source") || "screen").toLowerCase();
+
+    // Nube: la imagen la captura y sube el satélite de la laptop
+    if (IS_CLOUD) {
+      const f = requestFrame(source);
+      if (!f) {
+        return NextResponse.json({
+          success: false,
+          waiting: true,
+          error: "Esperando imagen de la laptop (¿está encendida con el satélite activo?)",
+        });
+      }
+      // Solo enviar la imagen si es más nueva que la que ya tiene el teléfono (ahorra datos móviles)
+      const since = Number(url.searchParams.get("since") || 0);
+      if (since && f.ts <= since) {
+        return NextResponse.json({ success: true, unchanged: true, source, timestamp: f.ts });
+      }
+      return NextResponse.json({ success: true, source, width: f.width, height: f.height, imageBase64: f.image, timestamp: f.ts });
+    }
 
     if (source === "webcam") {
       const { stdout } = await execFileAsync(
@@ -104,6 +125,18 @@ export async function POST(req: Request) {
     const yNorm = Number(body.yNorm);
     if (Number.isNaN(xNorm) || Number.isNaN(yNorm)) {
       return NextResponse.json({ success: false, error: "Coordenadas inválidas" }, { status: 400 });
+    }
+
+    if (IS_CLOUD) {
+      markInput();
+      enqueueSatelliteCommand("input", {
+        action: "tap",
+        target: body.target === "tv" ? "tv" : "pc",
+        xNorm: Math.max(0, Math.min(1, xNorm)),
+        yNorm: Math.max(0, Math.min(1, yNorm)),
+        button: body.button === "right" ? "right" : "left",
+      });
+      return NextResponse.json({ success: true, queued: true });
     }
 
     if (body.target === "tv") {

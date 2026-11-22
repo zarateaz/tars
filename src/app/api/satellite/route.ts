@@ -6,6 +6,7 @@ import {
   getSatelliteTelemetry,
   enqueueSatelliteCommand,
 } from "@/lib/satelliteQueue";
+import { wantedSources, isInteractive, storeFrame } from "@/lib/liveRelay";
 
 export async function GET(req: Request) {
   if (!verifyStarkAuth(req)) {
@@ -21,6 +22,8 @@ export async function GET(req: Request) {
     serverTime: new Date().toISOString(),
     commands: pendingCommands,
     latestTelemetry: telemetry,
+    vision: wantedSources(),       // fuentes que el teléfono está mirando ahora
+    interactive: isInteractive(),  // consultar más rápido (trackpad / vista en vivo)
   });
 }
 
@@ -38,6 +41,12 @@ export async function POST(req: Request) {
         ...body.telemetry,
         lastHeartbeat: new Date().toISOString(),
       });
+    }
+
+    // 1b. Fotograma en vivo subido por la laptop
+    if (body.frame && typeof body.frame === "object") {
+      const ok = storeFrame(String(body.frame.source || ""), String(body.frame.image || ""), Number(body.frame.width) || 0, Number(body.frame.height) || 0);
+      return NextResponse.json({ success: ok });
     }
 
     // 2. If enqueueing a new command from external source or web UI

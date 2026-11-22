@@ -14,8 +14,11 @@ Configuración (.env de la laptop o variables de entorno):
   JEARVIS_TV_BROADCAST=192.168.1.255      (opcional, para Wake-on-LAN)
 """
 
+import base64
 import json
+import struct
 import os
+import threading
 import re
 import urllib.parse
 import shlex
@@ -193,13 +196,47 @@ def send_wol(mac: str) -> None:
 
 
 # ---------- TV (ADB en la LAN de casa) ----------
+def tv_device_state() -> str:
+    try:
+        r = subprocess.run(["adb", "devices"], capture_output=True, text=True, timeout=4)
+        for line in r.stdout.splitlines():
+            if line.startswith(TV_IP):
+                return line.split()[-1]  # device | offline | unauthorized
+    except Exception:
+        pass
+    return "missing"
+
+
+def tv_reconnect(force: bool = False) -> bool:
+    """Si la TV quedó 'offline' (ADB colgado tras dormir), desconecta y vuelve a conectar."""
+    st = tv_device_state()
+    if st == "device" and not force:
+        return True
+    subprocess.run(["adb", "disconnect", TV_IP], capture_output=True, timeout=4, check=False)
+    subprocess.run(["adb", "connect", TV_IP], capture_output=True, timeout=5, check=False)
+    time.sleep(0.4)
+    return tv_device_state() == "device"
+
+
+def _tv_run(args, timeout, binary=False):
+    return subprocess.run(["adb", "-s", TV_IP, *args], capture_output=True, text=not binary, timeout=timeout, check=False)
+
+
 def tv_adb(*shell_args, timeout=8):
-    """Ejecuta `adb shell ...` en la TV (reconecta si hace falta). Devuelve (ok, salida)."""
+    """Ejecuta `adb shell ...` en la TV, reconectando si está offline. Devuelve (ok, salida)."""
     if not shutil.which("adb"):
         return False, "adb no instalado"
-    subprocess.run(["adb", "connect", TV_IP], capture_output=True, timeout=4, check=False)
-    r = subprocess.run(["adb", "-s", TV_IP, "shell", *shell_args], capture_output=True, text=True, timeout=timeout, check=False)
-    return r.returncode == 0, (r.stdout or "") + (r.stderr or "")
+    tv_reconnect()
+    try:
+        r = _tv_run(["shell", *shell_args], timeout)
+        out = (r.stdout or "") + (r.stderr or "")
+        if r.returncode != 0 or "offline" in out or "not found" in out:
+            tv_reconnect(force=True)
+            r = _tv_run(["shell", *shell_args], timeout)
+            out = (r.stdout or "") + (r.stderr or "")
+        return r.returncode == 0, out
+    except subprocess.TimeoutExpired:
+        return False, "timeout"
 
 
 def tv_is_awake():
@@ -243,10 +280,231 @@ def tv_power(state: str, mac: str):
     return awake is not None
 
 
+# ---------- Vista en vivo (pantalla / webcam / TV) ----------
+LIVE_MIN_INTERVAL = {"screen": 0.6, "webcam": 0.9, "tv": 1.2}
+_wanted_sources = set()
+_wanted_lock = threading.Lock()
+_monitor_cache = {"t": 0.0, "mon": (0, 0, 1920, 1080)}
+
+
+def capture_frame(source: str):
+    try:
+        if source == "screen":
+            r = subprocess.run(["grim", "-s", "0.5", "-t", "jpeg", "-q", "55", "-"], capture_output=True, timeout=4)
+            return r.stdout if r.returncode == 0 and r.stdout else None
+        if source == "webcam":
+            r = subprocess.run(["ffmpeg", "-loglevel", "error", "-f", "v4l2", "-video_size", "640x480", "-i", "/dev/video0",
+                                "-frames:v", "1", "-f", "image2pipe", "-vcodec", "mjpeg", "-"], capture_output=True, timeout=6)
+            return r.stdout if r.returncode == 0 and r.stdout else None
+        if source == "tv":
+            tv_reconnect()
+            local_png = "/tmp/tars_tv_cap.png"
+            if _tv_run(["shell", "screencap", "-p", "/sdcard/tars_cap.png"], 15).returncode != 0:
+                return None
+            if _tv_run(["pull", "/sdcard/tars_cap.png", local_png], 10).returncode != 0:
+                return None
+            r = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", local_png,
+                                "-vf", "scale=640:-1", "-q:v", "6", "-f", "image2pipe", "-vcodec", "mjpeg", "-"],
+                               capture_output=True, timeout=6)
+            return r.stdout if r.returncode == 0 and r.stdout else None
+    except Exception as e:
+        log(f"⚠️ Captura {source} falló: {e}")
+    return None
+
+
+def vision_worker():
+    """Hilo: mientras el teléfono mire una fuente, la captura y la sube al VPS."""
+    last = {}
+    while True:
+        with _wanted_lock:
+            sources = list(_wanted_sources)
+        if not sources:
+            time.sleep(0.3)
+            continue
+        for src in sources:
+            if time.time() - last.get(src, 0) < LIVE_MIN_INTERVAL.get(src, 1.0):
+                continue
+            last[src] = time.time()
+            data = capture_frame(src)
+            if data:
+                b64 = base64.b64encode(data).decode("ascii")
+                make_request("/api/satellite", {"frame": {"source": src, "image": "data:image/jpeg;base64," + b64}})
+        time.sleep(0.05)
+
+
+class VirtualInput:
+    """Mouse + teclado virtuales vía /dev/uinput (clics, rueda y teclas REALES; sin dependencias).
+    Hyprland 0.57 no tiene un dispatcher que haga clic de verdad."""
+    EV_SYN, EV_KEY, EV_REL = 0, 1, 2
+    REL_WHEEL = 8
+    BTN = {"left": 0x110, "right": 0x111, "middle": 0x112}
+    KEYS = {"Return": 28, "Enter": 28, "KP_Enter": 96, "BackSpace": 14, "space": 57, "Escape": 1, "Tab": 15,
+            "Up": 103, "Down": 108, "Left": 105, "Right": 106, "Delete": 111, "Home": 102, "End": 107,
+            "Page_Up": 104, "Page_Down": 109, "ctrl": 29, "shift": 42, "alt": 56, "super": 125, "v": 47,
+            "F5": 63, "F11": 87, "XF86AudioPlay": 164, "XF86AudioNext": 163, "XF86AudioPrev": 165}
+
+    def __init__(self):
+        self.fd = None
+
+    def _ensure(self) -> bool:
+        if self.fd is not None:
+            return True
+        try:
+            import fcntl
+            fd = os.open("/dev/uinput", os.O_WRONLY | os.O_NONBLOCK)
+            fcntl.ioctl(fd, 0x40045564, self.EV_KEY)  # UI_SET_EVBIT
+            fcntl.ioctl(fd, 0x40045564, self.EV_REL)
+            fcntl.ioctl(fd, 0x40045566, self.REL_WHEEL)  # UI_SET_RELBIT
+            for code in list(self.BTN.values()) + list(self.KEYS.values()):
+                fcntl.ioctl(fd, 0x40045565, code)  # UI_SET_KEYBIT
+            setup = struct.pack("HHHH80sI", 0x06, 0x7A25, 0x0001, 1, b"TARS virtual input", 0)
+            fcntl.ioctl(fd, 0x405C5503, setup)  # UI_DEV_SETUP
+            fcntl.ioctl(fd, 0x5501)  # UI_DEV_CREATE
+            self.fd = fd
+            time.sleep(0.8)  # que Hyprland registre el dispositivo nuevo
+            log("🖱️ Mouse/teclado virtual TARS listo")
+            return True
+        except Exception as e:
+            log(f"⚠️ /dev/uinput no disponible ({e}); clics y teclas desactivados")
+            return False
+
+    def _emit(self, etype, code, value):
+        os.write(self.fd, struct.pack("llHHi", 0, 0, etype, code, value))
+
+    def _sync(self):
+        self._emit(self.EV_SYN, 0, 0)
+
+    def click(self, button="left"):
+        if not self._ensure():
+            return False
+        code = self.BTN.get(button, self.BTN["left"])
+        self._emit(self.EV_KEY, code, 1); self._sync()
+        time.sleep(0.03)
+        self._emit(self.EV_KEY, code, 0); self._sync()
+        return True
+
+    def wheel(self, steps: int):
+        if not self._ensure():
+            return False
+        self._emit(self.EV_REL, self.REL_WHEEL, max(-10, min(10, steps))); self._sync()
+        return True
+
+    def keys(self, *names):
+        """Pulsa una combinación (ej. keys('ctrl','v')) y la suelta en orden inverso."""
+        if not self._ensure():
+            return False
+        codes = [self.KEYS[n] for n in names if n in self.KEYS]
+        if not codes:
+            return False
+        for c in codes:
+            self._emit(self.EV_KEY, c, 1); self._sync()
+        time.sleep(0.03)
+        for c in reversed(codes):
+            self._emit(self.EV_KEY, c, 0); self._sync()
+        return True
+
+
+VINPUT = VirtualInput()
+
+
+def hypr(*args):
+    return subprocess.run(["hyprctl", *args], capture_output=True, text=True, timeout=3, check=False)
+
+
+def monitor_box():
+    """(x, y, ancho, alto) del monitor enfocado (cache 30 s)."""
+    if time.time() - _monitor_cache["t"] > 30:
+        try:
+            mons = json.loads(hypr("monitors", "-j").stdout or "[]")
+            m = next((m for m in mons if m.get("focused")), mons[0] if mons else None)
+            if m:
+                sc = float(m.get("scale") or 1)
+                _monitor_cache["mon"] = (int(m["x"]), int(m["y"]), int(m["width"] / sc), int(m["height"] / sc))
+        except Exception:
+            pass
+        _monitor_cache["t"] = time.time()
+    return _monitor_cache["mon"]
+
+
+def pc_click(button: str = "left"):
+    VINPUT.click("right" if button == "right" else "left")
+
+
+def move_cursor_abs(x: int, y: int):
+    # Hyprland 0.57+: dispatch en Lua. (La sintaxis vieja "movecursor X Y" ya no funciona.)
+    r = hypr("dispatch", f"hl.dsp.cursor.move({{x={int(x)},y={int(y)}}})")
+    if "error" in (r.stdout or "").lower():
+        hypr("dispatch", "movecursor", f"{int(x)} {int(y)}")  # Hyprland < 0.57
+
+
+TV_KEYS = {"up": 19, "down": 20, "left": 21, "right": 22, "center": 23, "enter": 23, "ok": 23, "select": 23,
+           "back": 4, "home": 3, "menu": 82, "play": 85, "pause": 85, "mute": 164, "volup": 24, "voldown": 25}
+
+
+def execute_input(p: dict) -> bool:
+    act = str(p.get("action", ""))
+    target = p.get("target", "pc")
+    if target == "tv":
+        if act in ("dpad", "key"):
+            tv_adb(f"input keyevent {TV_KEYS.get(str(p.get('key', 'ok')).lower(), 23)}")
+        elif act == "type":
+            safe = re.sub(r"[^a-zA-Z0-9_\-\s.,@]", "", str(p.get("text", ""))).replace(" ", "%s")
+            if safe:
+                tv_adb("input text " + shlex.quote(safe))
+        elif act in ("tap", "click"):
+            x = max(0.0, min(1.0, float(p.get("xNorm", p.get("x", 0.5)) or 0.5)))
+            y = max(0.0, min(1.0, float(p.get("yNorm", p.get("y", 0.5)) or 0.5)))
+            tv_adb(f"input tap {int(x * 1279)} {int(y * 719)}")
+        else:
+            return False
+        return True
+
+    mx, my, mw, mh = monitor_box()
+    if act == "move":
+        dx, dy = int(p.get("dx", 0)), int(p.get("dy", 0))
+        if dx or dy:
+            try:
+                cx, cy = [int(float(v)) for v in hypr("cursorpos").stdout.strip().split(",")]
+            except Exception:
+                cx, cy = mx + mw // 2, my + mh // 2
+            nx = max(mx, min(mx + mw - 1, cx + dx))
+            ny = max(my, min(my + mh - 1, cy + dy))
+            move_cursor_abs(nx, ny)
+    elif act == "click":
+        pc_click("left")
+    elif act == "rclick":
+        pc_click("right")
+    elif act == "scroll":
+        dy = int(p.get("dy", 0))
+        VINPUT.wheel(-1 if dy > 0 else 1)  # dy>0 = bajar
+    elif act == "tap":
+        x = max(0.0, min(1.0, float(p.get("xNorm", 0.5))))
+        y = max(0.0, min(1.0, float(p.get("yNorm", 0.5))))
+        move_cursor_abs(mx + int(x * (mw - 1)), my + int(y * (mh - 1)))
+        time.sleep(0.03)
+        pc_click(str(p.get("button", "left")))
+    elif act == "type":
+        text = str(p.get("text", ""))[:500]
+        if text and shutil.which("wl-copy"):
+            subprocess.run(["wl-copy", "--", text], timeout=3, check=False)
+            time.sleep(0.05)
+            VINPUT.keys("ctrl", "v")
+    elif act == "key":
+        key = str(p.get("key", ""))
+        if key not in VirtualInput.KEYS:
+            log(f"⛔ Tecla no soportada: {key!r}")
+            return False
+        VINPUT.keys(key)
+    else:
+        return False
+    return True
+
+
 def execute_local_command(cmd: dict) -> bool:
     action = str(cmd.get("action", ""))
     payload = cmd.get("payload") or {}
-    log(f"⚡ [EJECUTANDO] {action} {payload}")
+    if action != "input" or payload.get("action") not in ("move",):
+        log(f"⚡ [EJECUTANDO] {action} {payload}")
 
     if action in ("open_app", "close_app"):
         name = str(payload.get("app", "")).strip().lower()
@@ -333,6 +591,9 @@ def execute_local_command(cmd: dict) -> bool:
             return True
         return False
 
+    if action == "input":
+        return execute_input(payload)
+
     if action == "tv_power":
         return tv_power(str(payload.get("state", "on")), str(payload.get("mac", "")))
 
@@ -401,7 +662,9 @@ def main() -> None:
         sys.exit(1)
 
     log(f"🛰️ Satélite conectado a {SERVER_URL}. Esperando órdenes...")
+    threading.Thread(target=vision_worker, daemon=True).start()
     last_telemetry = 0.0
+    interactive = False
     while True:
         try:
             now = time.time()
@@ -410,6 +673,10 @@ def main() -> None:
                 last_telemetry = now
 
             resp = make_request("/api/satellite")
+            with _wanted_lock:
+                _wanted_sources.clear()
+                _wanted_sources.update(s for s in (resp.get("vision") or []) if s in LIVE_MIN_INTERVAL)
+            interactive = bool(resp.get("interactive"))
             for cmd in resp.get("commands") or []:
                 try:
                     execute_local_command(cmd)
@@ -420,7 +687,8 @@ def main() -> None:
             break
         except Exception:
             time.sleep(3)
-        time.sleep(POLL_SECONDS)
+        # Trackpad / vista en vivo abiertos → consultar cada 0.15 s; en reposo, cada POLL_SECONDS
+        time.sleep(0.15 if interactive else POLL_SECONDS)
 
 
 if __name__ == "__main__":

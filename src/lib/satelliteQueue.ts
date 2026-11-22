@@ -49,6 +49,17 @@ function writeJson(file: string, data: unknown): void {
 
 export function enqueueSatelliteCommand(action: string, payload?: Record<string, any>): SatelliteCommand {
   const queue = readJson<SatelliteCommand[]>(SATELLITE_QUEUE_FILE, []);
+  // Movimientos de trackpad seguidos se suman en uno (evita colas de cientos de eventos)
+  const last = queue[queue.length - 1];
+  if (
+    action === "input" && payload?.action === "move" &&
+    last && last.action === "input" && last.payload?.action === "move" && last.payload?.target === payload?.target
+  ) {
+    last.payload.dx = Number(last.payload.dx || 0) + Number(payload.dx || 0);
+    last.payload.dy = Number(last.payload.dy || 0) + Number(payload.dy || 0);
+    writeJson(SATELLITE_QUEUE_FILE, queue);
+    return last;
+  }
   const cmd: SatelliteCommand = {
     id: `sat-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     action,
@@ -56,7 +67,7 @@ export function enqueueSatelliteCommand(action: string, payload?: Record<string,
     createdAt: new Date().toISOString(),
   };
   queue.push(cmd);
-  writeJson(SATELLITE_QUEUE_FILE, queue.slice(-30));
+  writeJson(SATELLITE_QUEUE_FILE, queue.slice(-80));
   return cmd;
 }
 

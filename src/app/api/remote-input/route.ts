@@ -1,3 +1,6 @@
+import { IS_CLOUD } from "@/lib/system";
+import { markInput } from "@/lib/liveRelay";
+import { enqueueSatelliteCommand } from "@/lib/satelliteQueue";
 import { NextResponse } from "next/server";
 import fs from "fs";
 import net from "net";
@@ -86,7 +89,29 @@ export async function POST(req: Request) {
     const body = await req.json();
     const action = String(body.action || "").toLowerCase();
     const target = String(body.target || "pc").toLowerCase();
-    console.log(`[REMOTE-INPUT] Received: action=${action}, dx=${body.dx}, dy=${body.dy}, target=${target}`);
+
+    // Nube: el mouse/teclado/TV se ejecutan en la laptop vía satélite
+    if (IS_CLOUD) {
+      const allowed = ["move", "click", "rclick", "scroll", "type", "key", "dpad", "tap", "touch_start", "sync_cursor"];
+      if (!allowed.includes(action)) {
+        return NextResponse.json({ success: false, error: "Acción de entrada no válida" }, { status: 400 });
+      }
+      markInput();
+      if (action === "touch_start" || action === "sync_cursor") {
+        return NextResponse.json({ success: true, relay: true });
+      }
+      enqueueSatelliteCommand("input", {
+        action,
+        target: target === "tv" ? "tv" : "pc",
+        dx: Math.round(Number(body.dx || 0)),
+        dy: Math.round(Number(body.dy || 0)),
+        key: typeof body.key === "string" ? body.key.slice(0, 32) : undefined,
+        text: typeof body.text === "string" ? body.text.slice(0, 500) : undefined,
+        x: body.x !== undefined ? Number(body.x) : undefined,
+        y: body.y !== undefined ? Number(body.y) : undefined,
+      });
+      return NextResponse.json({ success: true, queued: true });
+    }
 
     // 1. Control de Smart TV TCL
     if (target === "tv") {
