@@ -207,26 +207,54 @@ def tv_device_state() -> str:
     return "missing"
 
 
+def tv_reachable(timeout: float = 1.5) -> bool:
+    """¿La TV escucha en el puerto ADB? (Si está en reposo profundo, su Wi-Fi no responde.)"""
+    host, _, port = TV_IP.partition(":")
+    try:
+        with socket.create_connection((host, int(port or 5555)), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
 def tv_reconnect(force: bool = False) -> bool:
     """Si la TV quedó 'offline' (ADB colgado tras dormir), desconecta y vuelve a conectar."""
-    st = tv_device_state()
-    if st == "device" and not force:
-        return True
-    subprocess.run(["adb", "disconnect", TV_IP], capture_output=True, timeout=4, check=False)
-    subprocess.run(["adb", "connect", TV_IP], capture_output=True, timeout=5, check=False)
-    time.sleep(0.4)
-    return tv_device_state() == "device"
+    try:
+        st = tv_device_state()
+        if st == "device" and not force:
+            return True
+        if not tv_reachable():
+            return False
+        subprocess.run(["adb", "disconnect", TV_IP], capture_output=True, timeout=4, check=False)
+        subprocess.run(["adb", "connect", TV_IP], capture_output=True, timeout=6, check=False)
+        time.sleep(0.4)
+        return tv_device_state() == "device"
+    except (subprocess.TimeoutExpired, OSError):
+        return False
+
+
+class _Failed:
+    returncode = 1
+    stdout = b""
+    stderr = b""
 
 
 def _tv_run(args, timeout, binary=False):
-    return subprocess.run(["adb", "-s", TV_IP, *args], capture_output=True, text=not binary, timeout=timeout, check=False)
+    try:
+        return subprocess.run(["adb", "-s", TV_IP, *args], capture_output=True, text=not binary, timeout=timeout, check=False)
+    except (subprocess.TimeoutExpired, OSError):
+        f = _Failed()
+        if not binary:
+            f.stdout, f.stderr = "", "timeout"
+        return f
 
 
 def tv_adb(*shell_args, timeout=8):
     """Ejecuta `adb shell ...` en la TV, reconectando si está offline. Devuelve (ok, salida)."""
     if not shutil.which("adb"):
         return False, "adb no instalado"
-    tv_reconnect()
+    if not tv_reconnect():
+        return False, "La TV no responde por red (apagada o en reposo)"
     try:
         r = _tv_run(["shell", *shell_args], timeout)
         out = (r.stdout or "") + (r.stderr or "")
@@ -266,12 +294,15 @@ def tv_power(state: str, mac: str):
         ok, _ = tv_adb("input keyevent 224")  # WAKEUP: solo enciende
         if ok:
             return True
-        send_wol(mac)
-        for _ in range(4):
-            time.sleep(1.2)
-            ok, _ = tv_adb("input keyevent 224")
-            if ok:
-                return True
+        log("📺 TV sin respuesta: enviando Wake-on-LAN...")
+        for _ in range(8):  # hasta ~16 s para que el Wi-Fi de la TV despierte
+            send_wol(mac or "44:0f:b4:12:fa:ee")
+            time.sleep(2)
+            if tv_reachable(1.0):
+                ok, _ = tv_adb("input keyevent 224")
+                if ok:
+                    log("📺 TV encendida por Wake-on-LAN")
+                    return True
         log("❌ La TV no respondió (ni ADB ni Wake-on-LAN)")
         return False
     awake = tv_is_awake()
