@@ -692,6 +692,13 @@ export async function askDeepSeek(
 
   const executedSteps: ExecutedStep[] = [];
   let finalReply = "";
+  let toolChoice: "auto" | "required" = "auto";
+  let forcedRetryDone = false;
+  // Pide una acción física/app y la IA responde "Reproduciendo…/Abriendo…" SIN llamar herramientas:
+  // eso es una acción inventada. Se le obliga a ejecutarla (una sola vez).
+  const userWantsAction = /\b(pon|ponme|reproduce|abre|abrir|cierra|sube|baja|apaga|enciende|prende|busca|bloquea|captura|silencia|manda|env[ií]a|proyecta|crea|escribe)\b/i.test(userMessage);
+  const claimsAction = (t: string) =>
+    /\b(reproduciendo|abriendo|poniendo|ajustando|subiendo|bajando|apagando|encendiendo|cerrando|enviando|ejecutando|en marcha|listo|hecho|abierto|creado|guardado)\b/i.test(t);
 
   try {
     // Multi-step Autonomous Agent Loop (up to 6 tool-calling rounds)
@@ -706,7 +713,7 @@ export async function askDeepSeek(
           model: settings.deepseekModel || "deepseek-chat",
           messages,
           tools: TOOLS,
-          tool_choice: "auto",
+          tool_choice: toolChoice,
           max_tokens: 3000,
           temperature: 0.65,
         }),
@@ -753,9 +760,25 @@ export async function askDeepSeek(
             content: resultString,
           });
         }
+        toolChoice = "auto";
         // Continue loop so DeepSeek can execute the next step (e.g. write_file -> open_in_browser)
         continue;
       }
+
+      // Sin herramientas: ¿afirmó haber hecho algo que no hizo?
+      if (!forcedRetryDone && executedSteps.length === 0 && userWantsAction && claimsAction(finalReply)) {
+        forcedRetryDone = true;
+        toolChoice = "required";
+        messages.push({ role: "assistant", content: finalReply });
+        messages.push({
+          role: "user",
+          content:
+            "[SISTEMA] No ejecutaste ninguna herramienta, así que la acción NO ocurrió. Ejecútala ahora con la herramienta correcta y luego confirma en una frase.",
+        });
+        finalReply = "";
+        continue;
+      }
+      toolChoice = "auto";
 
       // No more tool calls — agent finished!
       break;

@@ -16,6 +16,8 @@ Configuración (.env de la laptop o variables de entorno):
 
 import json
 import os
+import re
+import urllib.parse
 import shlex
 import shutil
 import socket
@@ -190,6 +192,57 @@ def send_wol(mac: str) -> None:
     s.close()
 
 
+# ---------- TV (ADB en la LAN de casa) ----------
+def tv_adb(*shell_args, timeout=8):
+    """Ejecuta `adb shell ...` en la TV (reconecta si hace falta). Devuelve (ok, salida)."""
+    if not shutil.which("adb"):
+        return False, "adb no instalado"
+    subprocess.run(["adb", "connect", TV_IP], capture_output=True, timeout=4, check=False)
+    r = subprocess.run(["adb", "-s", TV_IP, "shell", *shell_args], capture_output=True, text=True, timeout=timeout, check=False)
+    return r.returncode == 0, (r.stdout or "") + (r.stderr or "")
+
+
+def tv_is_awake():
+    ok, out = tv_adb("dumpsys power | grep -m1 mWakefulness=")
+    if not ok:
+        return None
+    if "Awake" in out:
+        return True
+    if "Asleep" in out or "Dozing" in out:
+        return False
+    return None
+
+
+def tv_get_volume():
+    ok, out = tv_adb("cmd media_session volume --stream 3 --get")
+    m = re.search(r"volume is (\d+)", out or "", re.I)
+    return int(m.group(1)) if (ok and m) else None
+
+
+def tv_keys(code: int, count: int):
+    count = max(1, min(50, int(count)))
+    tv_adb(" && ".join([f"input keyevent {code}"] * count), timeout=20)
+
+
+def tv_power(state: str, mac: str):
+    if state == "on":
+        ok, _ = tv_adb("input keyevent 224")  # WAKEUP: solo enciende
+        if ok:
+            return True
+        send_wol(mac)
+        for _ in range(4):
+            time.sleep(1.2)
+            ok, _ = tv_adb("input keyevent 224")
+            if ok:
+                return True
+        log("❌ La TV no respondió (ni ADB ni Wake-on-LAN)")
+        return False
+    awake = tv_is_awake()
+    if awake is True:
+        tv_adb("input keyevent 26")  # POWER: solo si está encendida, así nunca la enciende por error
+    return awake is not None
+
+
 def execute_local_command(cmd: dict) -> bool:
     action = str(cmd.get("action", ""))
     payload = cmd.get("payload") or {}
@@ -279,6 +332,37 @@ def execute_local_command(cmd: dict) -> bool:
             detach(["mpv", "--no-video", "--really-quiet", f"--http-header-fields={headers}", audio_url])
             return True
         return False
+
+    if action == "tv_power":
+        return tv_power(str(payload.get("state", "on")), str(payload.get("mac", "")))
+
+    if action == "tv_set_volume":
+        target = max(0, min(100, int(payload.get("level", 30))))
+        cur = tv_get_volume()
+        if cur is None:
+            log("❌ No pude leer el volumen de la TV")
+            return False
+        diff = target - cur
+        if diff:
+            tv_keys(24 if diff > 0 else 25, abs(diff))
+        log(f"📺 Volumen TV {cur} → {tv_get_volume()}")
+        return True
+
+    if action == "tv_volume_step":
+        delta = max(-50, min(50, int(payload.get("delta", 5))))
+        if delta:
+            tv_keys(24 if delta > 0 else 25, abs(delta))
+        return True
+
+    if action == "tv_youtube":
+        q = urllib.parse.quote(str(payload.get("query", ""))[:200])
+        if not q:
+            return False
+        tv_adb("am start -a android.intent.action.VIEW -d " + shlex.quote(f"vnd.youtube://search?q={q}"))
+        if payload.get("autoplay", True):
+            time.sleep(float(payload.get("delaySec", 3.0)))  # esperar a que cargue YouTube
+            tv_adb("input keyevent 23")  # OK = reproducir el primer resultado
+        return True
 
     if action == "tv_wol":
         send_wol(str(payload.get("mac", "")))

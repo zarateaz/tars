@@ -115,6 +115,10 @@ export async function tvIsAwake(): Promise<boolean | null> {
  * 3. Inyecta KEYCODE_WAKEUP (224), KEYCODE_POWER (26) y KEYCODE_HOME (3) para activar pantalla y Launcher.
  */
 export async function tvPowerOn(): Promise<string> {
+  if (IS_CLOUD) {
+    enqueueSatelliteCommand("tv_power", { state: "on", mac: TV_MAC });
+    return "Encendiendo la TV desde tu laptop";
+  }
   // Camino rápido: KEYCODE_WAKEUP (224) es idempotente (solo enciende, nunca apaga).
   const r = await runAdb("shell input keyevent 224", 2500);
   if (!r.startsWith("Error ADB")) return "TV encendida";
@@ -130,6 +134,10 @@ export async function tvPowerOn(): Promise<string> {
 }
 
 export async function tvPowerOff(): Promise<string> {
+  if (IS_CLOUD) {
+    enqueueSatelliteCommand("tv_power", { state: "off" });
+    return "Apagando la TV desde tu laptop";
+  }
   // KEYCODE_POWER (26) alterna; solo se envía si la pantalla está realmente encendida.
   // Así "apaga" nunca enciende por accidente.
   const awake = await tvIsAwake();
@@ -155,6 +163,10 @@ export async function tvGetVolume(): Promise<number> {
 
 export async function tvVolumeUp(steps = 5): Promise<string> {
   const safeSteps = Math.max(1, Math.min(35, Math.round(steps)));
+  if (IS_CLOUD) {
+    enqueueSatelliteCommand("tv_volume_step", { delta: safeSteps });
+    return `Subiendo el volumen de la tele ${safeSteps} puntos.`;
+  }
   const cmds = Array(safeSteps).fill("input keyevent 24").join(" && ");
   await runAdb(`shell "${cmds}"`, 4000);
   const newVol = await tvGetVolume();
@@ -163,6 +175,10 @@ export async function tvVolumeUp(steps = 5): Promise<string> {
 
 export async function tvVolumeDown(steps = 5): Promise<string> {
   const safeSteps = Math.max(1, Math.min(35, Math.round(steps)));
+  if (IS_CLOUD) {
+    enqueueSatelliteCommand("tv_volume_step", { delta: -safeSteps });
+    return `Bajando el volumen de la tele ${safeSteps} puntos.`;
+  }
   const cmds = Array(safeSteps).fill("input keyevent 25").join(" && ");
   await runAdb(`shell "${cmds}"`, 4000);
   const newVol = await tvGetVolume();
@@ -170,6 +186,11 @@ export async function tvVolumeDown(steps = 5): Promise<string> {
 }
 
 export async function tvSetVolume(targetPct: number): Promise<string> {
+  if (IS_CLOUD) {
+    const level = Math.max(0, Math.min(100, Math.round(targetPct)));
+    enqueueSatelliteCommand("tv_set_volume", { level });
+    return `Volumen de la tele al ${level} por ciento.`;
+  }
   const cur = await tvGetVolume();
   const target = Math.max(0, Math.min(100, Math.round(targetPct)));
   const diff = target - cur;
@@ -274,6 +295,11 @@ export async function tvOpenApp(appName: string): Promise<string> {
 }
 
 export async function tvSearchYouTube(query: string, autoPlay = true): Promise<string> {
+  if (IS_CLOUD) {
+    // Búsqueda + OK con la espera hecha en la laptop (si se enviaban por separado, el OK llegaba antes de cargar YouTube)
+    enqueueSatelliteCommand("tv_youtube", { query, autoplay: autoPlay, delaySec: 3 });
+    return `Poniendo "${query}" en YouTube de la tele`;
+  }
   const encoded = encodeURIComponent(query);
   const res = await runAdb(`shell am start -a android.intent.action.VIEW -d "vnd.youtube://search?q=${encoded}"`);
   if (autoPlay) {
