@@ -1,0 +1,48 @@
+# ---- Dependencias / builds ----
+node_modules/
+.next/
+.venv/
+__pycache__/
+*.pyc
+tsconfig.tsbuildinfo
+*.log
+
+# ---- Secretos (NUNCA al repo) ----
+.env
+.env.*
+!.env.example
+satellite.env
+*.pem
+*.bin
+*.keystore
+reloj/
+vault/
+
+# ---- Datos personales / estado en tiempo de ejecución ----
+memory_store.json
+financial_ledger.json
+inbox_notifications.json
+phone_telemetry.json
+phone_commands.json
+satellite_commands.json
+satellite_status.json
+reminders.json
+reminders_announced.json
+home_welcome_state.json
+sentinel_trap.json
+notif_announced.json
+autonomous_triggers.json
+audio_cache/
+public/tunnel_info.json
+
+# ---- Binarios y artefactos pesados ----
+bin/
+models/
+*.apk
+*.idsig
+*.mp3
+*.pdf
+*.tex
+*.aux
+*.out
+android-apk/assets/*.bak

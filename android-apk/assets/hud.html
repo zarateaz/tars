@@ -1,0 +1,3392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>TARS // MARK X SIN LÍMITES</title>
+<style>
+  :root {
+    --bg-deep: #020814;
+    --bg-panel: rgba(5, 18, 42, 0.86);
+    --cyan: #00f0ff;
+    --blue: #0077ff;
+    --ice: #e0ffff;
+    --green: #00ffaa;
+    --amber: #ffaa00;
+    --danger: #ff2a6d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; user-select: none; }
+  body {
+    background: radial-gradient(circle at 50% 22%, #0a1f44 0%, #030814 58%, #010308 100%);
+    color: #e2f4ff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'SF Pro Display', sans-serif;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 10px 12px;
+  }
+
+  /* Modern Glassmorphic Corner Menu & Header */
+  .corner-menu-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, rgba(0, 160, 255, 0.22), rgba(0, 70, 220, 0.38));
+    border: 1px solid rgba(0, 240, 255, 0.55);
+    border-radius: 18px;
+    padding: 6px 12px;
+    color: #e0ffff;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    cursor: pointer;
+    box-shadow: 0 0 14px rgba(0, 180, 255, 0.32);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .corner-menu-btn:active {
+    transform: scale(0.95);
+    background: rgba(0, 240, 255, 0.45);
+  }
+  .sub-badge {
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: rgba(0, 240, 255, 0.15);
+    border: 1px solid rgba(0, 240, 255, 0.35);
+    color: var(--cyan);
+  }
+
+  /* Cortana / Siri Orb Zone */
+  .reactor-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    min-height: 230px;
+    position: relative;
+    padding: 6px 0;
+  }
+  .orb-container {
+    position: relative;
+    width: 230px;
+    height: 230px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  #reactorCanvas {
+    width: 230px;
+    height: 230px;
+    cursor: pointer;
+    border-radius: 50%;
+    filter: drop-shadow(0 0 30px rgba(0, 140, 255, 0.7));
+    transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  #reactorCanvas:active {
+    transform: scale(0.96);
+  }
+
+  /* Mic Button in Dock */
+  .mic-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 240, 255, 0.5);
+    background: linear-gradient(135deg, rgba(0, 150, 255, 0.3), rgba(0, 60, 180, 0.5));
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 0 12px rgba(0, 200, 255, 0.3);
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .mic-btn:active, .mic-btn.listening {
+    background: #00f0ff;
+    color: #010814;
+    box-shadow: 0 0 22px #00f0ff;
+    transform: scale(1.08);
+  }
+
+  /* Drawer Modal */
+  .drawer-modal {
+    background: rgba(3, 10, 26, 0.96) !important;
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+  }
+  .drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(0, 240, 255, 0.3);
+    margin-bottom: 12px;
+  }
+  .drawer-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .drawer-title {
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0.8px;
+    color: var(--cyan);
+    text-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+  }
+  .drawer-sub {
+    font-size: 8.5px;
+    color: rgba(180, 230, 255, 0.6);
+    letter-spacing: 0.5px;
+  }
+  .drawer-close-btn {
+    background: rgba(255, 42, 109, 0.15);
+    border: 1px solid rgba(255, 42, 109, 0.5);
+    color: #ff6699;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .drawer-content {
+    overflow-y: auto;
+    max-height: calc(88vh - 65px);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-right: 4px;
+  }
+  .drawer-card {
+    background: rgba(8, 22, 50, 0.6);
+    border: 1px solid rgba(0, 200, 255, 0.22);
+    border-radius: 14px;
+    padding: 10px 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  }
+  .drawer-card-title {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--cyan);
+    letter-spacing: 0.8px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .drawer-btn-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+  }
+  .drawer-action-btn {
+    background: rgba(0, 110, 210, 0.16);
+    border: 1px solid rgba(0, 220, 255, 0.35);
+    border-radius: 10px;
+    padding: 9px 10px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s ease;
+  }
+  .drawer-action-btn:active {
+    background: rgba(0, 240, 255, 0.35);
+    transform: scale(0.97);
+  }
+  .drawer-action-btn.primary {
+    background: linear-gradient(135deg, rgba(0, 140, 255, 0.38), rgba(0, 80, 200, 0.48));
+    border-color: var(--cyan);
+    box-shadow: 0 0 10px rgba(0, 200, 255, 0.25);
+  }
+  .drawer-action-btn .icon {
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .drawer-action-btn .text {
+    overflow: hidden;
+  }
+  .drawer-action-btn .title {
+    font-size: 10.5px;
+    font-weight: 800;
+    color: #e0ffff;
+    line-height: 1.2;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+  .drawer-action-btn .desc {
+    font-size: 8px;
+    color: rgba(160, 220, 255, 0.65);
+    line-height: 1.15;
+    margin-top: 2px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+  .drawer-telemetry-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+  }
+  .hud-layer { position: relative; z-index: 2; }
+
+  /* Header */
+  .top-bar { display: flex; flex-direction: column; gap: 6px; }
+  .brand-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(0, 240, 255, 0.35);
+    padding-bottom: 5px;
+    gap: 6px;
+  }
+  .brand-title {
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    color: var(--cyan);
+    text-shadow: 0 0 10px rgba(0, 240, 255, 0.75);
+    white-space: nowrap;
+  }
+  .top-actions { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+  .mini-pill {
+    font-size: 8.5px;
+    font-weight: bold;
+    padding: 3px 6px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 240, 255, 0.45);
+    background: rgba(0, 150, 255, 0.14);
+    color: var(--ice);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .sync-badge {
+    font-size: 9px;
+    font-weight: bold;
+    padding: 4px 8px;
+    border-radius: 12px;
+    border: 1px solid var(--cyan);
+    background: rgba(0, 240, 255, 0.12);
+    color: var(--cyan);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+  }
+  .sync-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan);
+  }
+  .nodes-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+  }
+  .node-card {
+    background: var(--bg-panel);
+    border: 1px solid rgba(0, 200, 255, 0.32);
+    border-radius: 10px;
+    padding: 6px 9px;
+    box-shadow: inset 0 0 14px rgba(0, 140, 255, 0.12);
+  }
+  .node-header {
+    font-size: 9px;
+    color: var(--cyan);
+    letter-spacing: 0.8px;
+    font-weight: bold;
+    margin-bottom: 3px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .node-metrics { font-size: 10px; color: #b8ecff; line-height: 1.35; }
+  .metric-bar {
+    height: 4px;
+    background: rgba(0, 100, 180, 0.3);
+    border-radius: 2px;
+    margin-top: 3px;
+    overflow: hidden;
+  }
+  .metric-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--blue), var(--cyan));
+    width: 50%;
+    transition: width 0.4s ease;
+  }
+
+  .alert-banner {
+    display: none;
+    background: linear-gradient(90deg, rgba(0, 255, 170, 0.22), rgba(0, 240, 255, 0.26));
+    border: 1px solid var(--green);
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: bold;
+    text-align: center;
+    box-shadow: 0 0 15px rgba(0, 255, 170, 0.35);
+    margin-top: 3px;
+  }
+  .alert-banner.show { display: block; }
+
+  /* Center Arc Reactor */
+  .reactor-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    min-height: 165px;
+    position: relative;
+  }
+  #reactorCanvas { width: 185px; height: 185px; cursor: pointer; }
+  .status-label {
+    margin-top: 2px;
+    font-size: 10px;
+    letter-spacing: 1.8px;
+    color: var(--cyan);
+    text-shadow: 0 0 8px rgba(0, 240, 255, 0.65);
+    text-align: center;
+  }
+  .mood-pill {
+    margin-top: 4px;
+    font-size: 10px;
+    color: #9beeff;
+    background: rgba(0, 150, 255, 0.14);
+    border: 1px solid rgba(0, 240, 255, 0.28);
+    padding: 2px 10px;
+    border-radius: 14px;
+  }
+
+  /* 8 Tactical Modules (4x2 grid) */
+  .tactical-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    margin-bottom: 7px;
+  }
+  .tac-btn {
+    background: rgba(0, 110, 210, 0.18);
+    border: 1px solid rgba(0, 225, 255, 0.42);
+    color: var(--ice);
+    padding: 7px 2px;
+    border-radius: 8px;
+    font-size: 9px;
+    font-weight: bold;
+    letter-spacing: 0.2px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    line-height: 1.25;
+  }
+  .tac-btn:active, .tac-btn.active {
+    background: rgba(0, 240, 255, 0.35);
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.6);
+    transform: scale(0.96);
+  }
+
+  /* Console & Luxury Chat */
+  .console-box {
+    background: radial-gradient(circle at 50% 0%, rgba(0, 45, 95, 0.4), rgba(2, 9, 22, 0.94));
+    border: 1px solid rgba(0, 220, 255, 0.42);
+    border-radius: 14px;
+    padding: 9px 10px;
+    height: 145px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    margin-bottom: 6px;
+    box-shadow: inset 0 0 20px rgba(0, 180, 255, 0.12), 0 8px 24px rgba(0, 0, 0, 0.7);
+    transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    scroll-behavior: smooth;
+  }
+  .console-box.expanded {
+    height: 320px;
+    box-shadow: inset 0 0 25px rgba(0, 240, 255, 0.22), 0 12px 35px rgba(0, 0, 0, 0.9);
+  }
+  .msg {
+    font-size: 11.5px;
+    line-height: 1.45;
+    padding: 8px 11px;
+    border-radius: 13px;
+    word-break: break-word;
+    user-select: text;
+    position: relative;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: all 0.2s ease;
+  }
+  .msg-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+  }
+  .msg-author.user {
+    color: #38bdf8;
+    text-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+  }
+  .msg-author.jarvis {
+    color: #00ffaa;
+    text-shadow: 0 0 8px rgba(0, 255, 170, 0.5);
+  }
+  .msg-time {
+    color: rgba(180, 230, 255, 0.55);
+    font-size: 8.5px;
+    font-family: monospace;
+  }
+  .msg-body {
+    font-family: system-ui, -apple-system, sans-serif;
+    color: #e0f2fe;
+    font-size: 11.5px;
+  }
+  .msg-body b {
+    color: #00f0ff;
+  }
+  .msg.user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, rgba(0, 110, 220, 0.38), rgba(0, 60, 150, 0.48));
+    border: 1px solid rgba(0, 210, 255, 0.55);
+    border-bottom-right-radius: 3px;
+    max-width: 86%;
+    box-shadow: 0 3px 14px rgba(0, 140, 255, 0.25);
+  }
+  .msg.jarvis {
+    align-self: flex-start;
+    background: linear-gradient(135deg, rgba(4, 20, 45, 0.94), rgba(2, 35, 68, 0.88));
+    border: 1px solid rgba(0, 255, 200, 0.38);
+    border-bottom-left-radius: 3px;
+    max-width: 92%;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6), inset 0 0 10px rgba(0, 255, 200, 0.08);
+  }
+
+  /* Quick Prompts Chips Row */
+  .quick-chips-row {
+    display: flex;
+    gap: 5px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    margin-bottom: 6px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .quick-chips-row::-webkit-scrollbar { display: none; }
+  .q-chip {
+    flex: none;
+    background: rgba(0, 45, 95, 0.38);
+    border: 1px solid rgba(0, 220, 255, 0.32);
+    border-radius: 12px;
+    color: #a5f3fc;
+    font-size: 9.5px;
+    font-weight: 600;
+    padding: 5px 9px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+  .q-chip:active {
+    background: rgba(0, 240, 255, 0.3);
+    border-color: var(--cyan);
+    transform: scale(0.95);
+  }
+
+  .voice-transcript-bar {
+    background: rgba(0, 34, 72, 0.92);
+    border: 1px solid rgba(0, 240, 255, 0.45);
+    border-radius: 12px;
+    padding: 6px 10px;
+    margin-bottom: 6px;
+    font-size: 11px;
+    font-weight: bold;
+    color: #9beeff;
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    user-select: text;
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.16);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .voice-transcript-bar.listening {
+    border-color: var(--green);
+    color: var(--green);
+    background: rgba(0, 55, 45, 0.92);
+    box-shadow: 0 0 14px rgba(0, 255, 170, 0.35);
+  }
+  .voice-transcript-bar.recognized {
+    border-color: var(--cyan);
+    color: #ffffff;
+    background: rgba(0, 68, 120, 0.92);
+  }
+  .voice-transcript-bar.error {
+    border-color: var(--amber);
+    color: var(--amber);
+  }
+  .input-row { display: flex; gap: 6px; align-items: center; }
+  .cmd-input {
+    flex: 1;
+    background: rgba(3, 14, 34, 0.94);
+    border: 1px solid rgba(0, 225, 255, 0.5);
+    border-radius: 16px;
+    padding: 10px 14px;
+    color: var(--ice);
+    font-size: 12px;
+    outline: none;
+    user-select: text;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .cmd-input:focus {
+    border-color: #00f0ff;
+    box-shadow: 0 0 14px rgba(0, 240, 255, 0.4);
+  }
+  .send-btn {
+    background: linear-gradient(135deg, #0077ff, #00f0ff);
+    border: none;
+    color: #010814;
+    font-weight: 900;
+    width: 44px;
+    height: 40px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 0 14px rgba(0, 240, 255, 0.4);
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+  }
+  .send-btn:active {
+    transform: scale(0.92);
+    box-shadow: 0 0 6px rgba(0, 240, 255, 0.8);
+  }
+
+  /* Modals */
+  .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(1, 7, 20, 0.97);
+    z-index: 30;
+    display: none;
+    flex-direction: column;
+    padding: 14px;
+    overflow-y: auto;
+  }
+  .modal.open { display: flex; }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--cyan);
+    padding-bottom: 9px;
+    margin-bottom: 10px;
+  }
+  .panel-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-top: 8px;
+    min-height: 110px;
+  }
+  .list-item {
+    background: rgba(0, 145, 255, 0.12);
+    border: 1px solid rgba(0, 225, 255, 0.32);
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+  .chip {
+    background: rgba(0, 240, 255, 0.14);
+    border: 1px solid rgba(0, 240, 255, 0.45);
+    color: var(--cyan);
+    padding: 5px 10px;
+    border-radius: 14px;
+    font-size: 10px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .cam-wrap {
+    position: relative;
+    width: 100%;
+    height: 260px;
+    background: #000;
+    border: 2px solid var(--cyan);
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+  }
+  #camVideo, #camPreview { width: 100%; height: 100%; object-fit: cover; }
+  #camPreview { display: none; }
+  .hud-reticle {
+    position: absolute;
+    inset: 12px;
+    border: 1px dashed rgba(0, 240, 255, 0.55);
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 7px;
+    font-size: 9px;
+    color: var(--cyan);
+    text-shadow: 0 0 6px #000;
+  }
+  .vision-box {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 240, 255, 0.35);
+    background: rgba(0, 80, 160, 0.18);
+    font-size: 11px;
+    line-height: 1.4;
+    max-height: 130px;
+    overflow-y: auto;
+    user-select: text;
+  }
+  .tv-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; margin-top: 8px; }
+  .tv-btn {
+    background: rgba(0, 115, 225, 0.2);
+    border: 1px solid rgba(0, 240, 255, 0.45);
+    color: var(--ice);
+    padding: 11px 7px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .tv-btn.danger { border-color: var(--danger); color: #ffb3c9; background: rgba(255, 42, 109, 0.16); }
+  .tv-btn.ok { border-color: var(--green); color: #b8ffe8; background: rgba(0, 255, 170, 0.15); }
+  .trackpad-area {
+    width: 100%;
+    height: 245px;
+    border: 2px solid var(--cyan);
+    border-radius: 14px;
+    background: radial-gradient(circle at center, rgba(0, 240, 255, 0.12), rgba(2, 10, 28, 0.92));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--cyan);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    touch-action: none;
+    margin-bottom: 8px;
+    box-shadow: inset 0 0 28px rgba(0, 180, 255, 0.18);
+  }
+  .section-title {
+    font-size: 10px;
+    color: var(--cyan);
+    letter-spacing: 1px;
+    font-weight: bold;
+    margin: 8px 0 4px;
+  }
+</style>
+</head>
+<body>
+
+  <!-- TOP MINIMALIST NAV BAR -->
+  <div class="top-bar hud-layer">
+    <div class="brand-row">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="brand-title">⚡ TARS</span>
+        <span class="sub-badge">AI CORE</span>
+      </div>
+      <div class="top-actions">
+        <div class="sync-badge" onclick="openNetworkModal()">
+          <div class="sync-dot" id="syncDot"></div>
+          <span id="syncText">CONECTANDO...</span>
+        </div>
+        <button class="corner-menu-btn" onclick="openModulesDrawer()">
+          <span style="font-size:13px;">💠</span>
+          <span>MÓDULOS</span>
+        </button>
+      </div>
+    </div>
+    <div class="alert-banner" id="alertBanner" onclick="this.classList.remove('show')"></div>
+  </div>
+
+  <!-- CENTER: RADIANT BLUE SPHERE (SIRI / CORTANA ORB) -->
+  <div class="reactor-zone hud-layer">
+    <div class="orb-container" onclick="triggerVoice()">
+      <canvas id="reactorCanvas" width="280" height="280"></canvas>
+    </div>
+    <div class="status-label" id="statusLabel">TOCA LA ESFERA PARA HABLAR</div>
+    <div class="mood-pill" id="moodPill">TARS | Zárate</div>
+  </div>
+
+  <!-- BOTTOM: CHAT CONSOLE & INPUT DOCK -->
+  <div class="hud-layer">
+    <!-- Real-Time Voice Streaming Bar -->
+    <div class="voice-transcript-bar" id="liveVoiceBar">🗣️ VOZ EN TEXTO: Toca la esfera azul para hablar...</div>
+
+    <!-- Chat Console Header -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin:4px 0 3px 0; padding:0 2px;">
+      <span style="font-size:9.5px; font-weight:bold; letter-spacing:0.8px; color:var(--cyan); display:flex; align-items:center; gap:5px;">
+        <span style="width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 6px var(--green); display:inline-block;"></span>
+        💬 CONVERSACIÓN // ZÁRATE ⇄ TARS
+      </span>
+      <div style="display:flex; gap:4px;">
+        <button class="chip" style="margin:0; padding:3px 7px; font-size:9px;" onclick="toggleChatExpand()" id="btnExpandChat">⛶ EXPANDIR</button>
+        <button class="chip" style="margin:0; padding:3px 7px; font-size:9px;" onclick="clearChatConsole()">🗑️ LIMPIAR</button>
+      </div>
+    </div>
+
+    <!-- Chat Console Box -->
+    <div class="console-box" id="consoleBox">
+      <div class="msg jarvis">
+        <div class="msg-header">
+          <span class="msg-author jarvis">⚡ TARS</span>
+          <span class="msg-time">EN LÍNEA</span>
+        </div>
+        <div class="msg-body">
+          TARS en línea, Zárate. Toca la esfera para hablar o escribe una orden. Humor al 75 por ciento.
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Chips Row -->
+    <div class="quick-chips-row">
+      <button class="q-chip" onclick="quickAsk('Llegué a casa, ¿qué novedades hay?')">🏠 Llegué a Casa</button>
+      <button class="q-chip" onclick="quickAsk('Léeme las notificaciones')">📬 Notificaciones</button>
+      <button class="q-chip" onclick="openTrackpadModal('touch')">🎮 Trackpad 0-Lag</button>
+      <button class="q-chip" onclick="quickAsk('¿Qué puedes hacer por mí hoy, TARS?')">💡 Capacidades</button>
+      <button class="q-chip" onclick="quickAsk('Pasa la música de la laptop a la TV')">📺 Pasar a TV</button>
+      <button class="q-chip" onclick="quickAsk('Activa el modo tesis para concentrarme')">🎓 Modo Tesis</button>
+      <button class="q-chip" onclick="quickAsk('Activa el modo turbo de rendimiento')">⚡ Modo Turbo</button>
+      <button class="q-chip" onclick="openModulesDrawer()">💠 Todos los Módulos</button>
+    </div>
+
+    <!-- Input Row Dock -->
+    <div class="input-row">
+      <input type="text" id="cmdInput" class="cmd-input" placeholder="Pregunta u ordena lo que quieras, Zarate..." onkeydown="if(event.key==='Enter')sendCommand()" />
+      <button class="mic-btn" onclick="triggerVoice()" id="bottomMicBtn" title="Hablar con TARS">
+        <span style="font-size:16px;">🎙️</span>
+      </button>
+      <button class="send-btn" onclick="sendCommand()" title="Enviar mensaje">
+        <span style="font-size:15px; color:#010814; font-weight:900;">➤</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- CORNER MODULES DRAWER (MODAL) -->
+  <div class="modal drawer-modal" id="modulesDrawer">
+    <div class="drawer-header">
+      <div class="drawer-title-wrap">
+        <span style="font-size:18px;">💠</span>
+        <div>
+          <div class="drawer-title">CENTRO DE CONTROL & MÓDULOS</div>
+          <div class="drawer-sub">TARS // ACCESO RÁPIDO ORDENADO</div>
+        </div>
+      </div>
+      <button class="drawer-close-btn" onclick="closeModulesDrawer()">✕</button>
+    </div>
+
+    <div class="drawer-content">
+      <!-- CATEGORY 1: LAPTOP & TV DIRECT CONTROL -->
+      <div class="drawer-card">
+        <div class="drawer-card-title">🎮 CONTROL DE LAPTOP & ESCRITORIO</div>
+        <div class="drawer-btn-grid">
+          <button class="drawer-action-btn primary" onclick="closeModulesDrawer();openTrackpadModal('touch')">
+            <span class="icon">🎮</span>
+            <div class="text">
+              <div class="title">Trackpad Táctil 0-Lag</div>
+              <div class="desc">Cursor Wayland a 60 FPS directo</div>
+            </div>
+          </button>
+          <button class="drawer-action-btn" onclick="closeModulesDrawer();openTrackpadModal('screen')">
+            <span class="icon">🖥️</span>
+            <div class="text">
+              <div class="title">Pantalla PC en Vivo</div>
+              <div class="desc">Espejo táctil interactivo</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- CATEGORY 2: SMART TV TCL -->
+      <div class="drawer-card">
+        <div class="drawer-card-title">📺 SMART TV TCL (192.168.1.54)</div>
+        <div class="drawer-btn-grid">
+          <button class="drawer-action-btn" onclick="sendToLaptop('enciende la tv')">
+            <span class="icon">⚡</span>
+            <div class="text"><div class="title">Encender TV</div><div class="desc">Wake on LAN / ADB</div></div>
+          </button>
+          <button class="drawer-action-btn" onclick="sendToLaptop('apaga la tv')">
+            <span class="icon">⏻</span>
+            <div class="text"><div class="title">Apagar TV</div><div class="desc">Standby inmediato</div></div>
+          </button>
+          <button class="drawer-action-btn" onclick="sendToLaptop('sube el volumen de la tv')">
+            <span class="icon">🔊</span>
+            <div class="text"><div class="title">Volumen +</div><div class="desc">Aumentar sonido TV</div></div>
+          </button>
+          <button class="drawer-action-btn" onclick="sendToLaptop('baja el volumen de la tv')">
+            <span class="icon">🔉</span>
+            <div class="text"><div class="title">Volumen -</div><div class="desc">Reducir sonido TV</div></div>
+          </button>
+          <button class="drawer-action-btn" onclick="closeModulesDrawer();openTrackpadModal('tv')">
+            <span class="icon">📱</span>
+            <div class="text"><div class="title">Ver Pantalla TV</div><div class="desc">Espejo táctil de la TV</div></div>
+          </button>
+          <button class="drawer-action-btn" onclick="quickAsk('Pasa la música de la laptop a la TV')">
+            <span class="icon">🚀</span>
+            <div class="text"><div class="title">Teleport Multimedia</div><div class="desc">Laptop ➔ Smart TV</div></div>
+          </button>
+        </div>
+      </div>
+
+      <!-- CATEGORY 3: PHONE TOOLS (SPARK 30) -->
+      <div class="drawer-card">
+        <div class="drawer-card-title">📱 HERRAMIENTAS TARS (SPARK 30)</div>
+        <div class="drawer-btn-grid">
+          <button class="drawer-action-btn" id="btnTorch" onclick="toggleTorchBtn()">
+            <span class="icon">🔦</span>
+            <div class="text"><div class="title">Linterna TARS</div><div class="desc">Luz LED de potencia</div></div>
+          </button>
+          <button class="drawer-action-btn" onclick="closeModulesDrawer();openRemindersModal()">
+            <span class="icon">⏰</span>
+            <div class="text"><div class="title">Alarmas & Recordatorios</div><div class="desc">Agenda y cronómetros</div></div>
+          </button>
+          <button class="drawer-action-btn" onclick="closeModulesDrawer();openWhatsAppModal()">
+            <span class="icon">💬</span>
+            <div class="text"><div class="title">WhatsApp & Contactos</div><div class="desc">Mensajería por voz</div></div>
+          </button>
+          <button class="drawer-action-btn" onclick="closeModulesDrawer();openCameraModal('environment', false, false)">
+            <span class="icon">📸</span>
+            <div class="text"><div class="title">Visor Óptico IA</div><div class="desc">OCR + Análisis DeepSeek</div></div>
+          </button>
+          <button class="drawer-action-btn" onclick="closeModulesDrawer();openAirDropModal()">
+            <span class="icon">📋</span>
+            <div class="text"><div class="title">TARS AirDrop</div><div class="desc">Portapapeles & Archivos</div></div>
+          </button>
+          <button class="drawer-action-btn" onclick="closeModulesDrawer();openNetworkModal()">
+            <span class="icon">🌐</span>
+            <div class="text"><div class="title">Red & Nodos IP</div><div class="desc">USB, WiFi, Cloud</div></div>
+          </button>
+        </div>
+      </div>
+
+      <!-- CATEGORY 4: SECURITY & PROTOCOLS -->
+      <div class="drawer-card">
+        <div class="drawer-card-title">🛡️ SEGURIDAD & PROTOCOLOS</div>
+        <div class="drawer-btn-grid">
+          <button class="drawer-action-btn" onclick="closeModulesDrawer();openSentinelModal()">
+            <span class="icon">🛡️</span>
+            <div class="text"><div class="title">Modo Centinela</div><div class="desc">Webcam PC + Radar</div></div>
+          </button>
+          <button class="drawer-action-btn" onclick="closeModulesDrawer();openProtocolsModal()">
+            <span class="icon">🎬</span>
+            <div class="text"><div class="title">Protocolos Especiales</div><div class="desc">Tesis, Turbo, Cine</div></div>
+          </button>
+          <button class="drawer-action-btn" onclick="openTermuxBtn()">
+            <span class="icon">💻</span>
+            <div class="text"><div class="title">Terminal Arch Linux</div><div class="desc">SSH / Termux</div></div>
+          </button>
+          <button class="drawer-action-btn" id="wakePill" onclick="toggleHandsFree()">
+            <span class="icon">🎙️</span>
+            <div class="text"><div class="title">Oye TARS (Voz)</div><div class="desc" id="wakeSubText">Activar manos libres</div></div>
+          </button>
+        </div>
+      </div>
+
+      <!-- CATEGORY 5: ⚡ CYBER-ROOT TARS (CONTROL KERNEL) -->
+      <div class="drawer-card" style="border-color: rgba(0, 255, 170, 0.45); box-shadow: 0 0 16px rgba(0, 255, 170, 0.15);">
+        <div class="drawer-card-title" style="color: var(--green);">⚡ CYBER-ROOT TARS // CONTROL KERNEL</div>
+        <div class="drawer-btn-grid">
+          <button class="drawer-action-btn" style="border-color: rgba(0, 255, 170, 0.4);" onclick="closeModulesDrawer();rootCpuTurbo()">
+            <span class="icon">⚡</span>
+            <div class="text"><div class="title">Turbo Overclock CPU</div><div class="desc">Governor a 'performance'</div></div>
+          </button>
+          <button class="drawer-action-btn" style="border-color: rgba(0, 240, 255, 0.4);" onclick="closeModulesDrawer();rootBypassBattery(false)">
+            <span class="icon">🔋</span>
+            <div class="text"><div class="title">Batería Eterna (Bypass)</div><div class="desc">Corta carga / usa cable</div></div>
+          </button>
+          <button class="drawer-action-btn" onclick="closeModulesDrawer();rootDropRam()">
+            <span class="icon">🚀</span>
+            <div class="text"><div class="title">Purga Caché RAM</div><div class="desc">Drop caches kernel</div></div>
+          </button>
+          <button class="drawer-action-btn" onclick="closeModulesDrawer();rootCpuPowersave()">
+            <span class="icon">❄️</span>
+            <div class="text"><div class="title">Modo Frío / Ahorro</div><div class="desc">Governor a 'powersave'</div></div>
+          </button>
+          <button class="drawer-action-btn" onclick="closeModulesDrawer();rootSilentScreenshot()">
+            <span class="icon">📸</span>
+            <div class="text"><div class="title">Captura Silenciosa</div><div class="desc">Screencap por root</div></div>
+          </button>
+          <button class="drawer-action-btn" onclick="closeModulesDrawer();rootBypassBattery(true)">
+            <span class="icon">⚡</span>
+            <div class="text"><div class="title">Restablecer Carga</div><div class="desc">Cargar al 100%</div></div>
+          </button>
+        </div>
+      </div>
+
+      <!-- CATEGORY 6: DUAL NODE TELEMETRY -->
+      <div class="drawer-card">
+        <div class="drawer-card-title">📊 TELEMETRÍA EN TIEMPO REAL</div>
+        <div class="drawer-telemetry-row">
+          <div class="node-card" onclick="runDualDiag()">
+            <div class="node-header">
+              <span>NODO 01 // SPARK 30</span>
+              <span id="phBat">100%</span>
+            </div>
+            <div class="node-metrics">
+              <div>TEMP: <span id="phTemp">32.0°C</span> | VOL: <span id="phVol">75%</span></div>
+              <div>RAM LIBRE: <span id="phRam">5.2 GB</span></div>
+            </div>
+            <div class="metric-bar"><div class="metric-fill" id="phBar" style="width:100%"></div></div>
+          </div>
+          <div class="node-card" onclick="syncWithLaptop(true)">
+            <div class="node-header">
+              <span>NODO 02 // LAPTOP</span>
+              <span id="pcCpu">CPU --%</span>
+            </div>
+            <div class="node-metrics">
+              <div>RAM PC: <span id="pcRam">--%</span></div>
+              <div>MEM: <span id="memCount">0</span> | REC: <span id="remCount">0</span></div>
+            </div>
+            <div class="metric-bar"><div class="metric-fill" id="pcBar" style="width:35%"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 1: REMINDERS -->
+  <div class="modal" id="remModal">
+    <div class="modal-header">
+      <div class="brand-title">⏰ RECORDATORIOS TARS</div>
+      <button class="tac-btn" style="padding:6px 12px" onclick="closeModals()">CERRAR ✕</button>
+    </div>
+    <input type="text" id="remTextInput" class="cmd-input" style="flex:none;margin-bottom:8px" placeholder="¿Qué debo recordarte, Zarate?" />
+    <div class="chip-row">
+      <button class="chip" onclick="quickReminder(1)">+ 1 min</button>
+      <button class="chip" onclick="quickReminder(5)">+ 5 min</button>
+      <button class="chip" onclick="quickReminder(15)">+ 15 min</button>
+      <button class="chip" onclick="quickReminder(60)">+ 1 hora</button>
+    </div>
+    <div style="display:flex; gap:6px; margin-top:4px;">
+      <input type="datetime-local" id="remDateTime" class="cmd-input" />
+      <button class="send-btn" onclick="customReminder()">AGENDAR</button>
+    </div>
+    <div class="panel-list" id="remList"></div>
+  </div>
+
+  <!-- MODAL 2: WHATSAPP & CONTACTS -->
+  <div class="modal" id="waModal">
+    <div class="modal-header">
+      <div class="brand-title">💬 CONTACTOS & WHATSAPP</div>
+      <button class="tac-btn" style="padding:6px 12px" onclick="closeModals()">CERRAR ✕</button>
+    </div>
+    <div id="a11yBanner" style="font-size:10px;padding:7px 9px;border-radius:8px;border:1px solid var(--amber);background:rgba(255,170,0,0.12);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:6px;">
+      <span id="a11yStatusText">Auto-envío sin tocar pantalla: DESACTIVADO</span>
+      <button class="chip" style="margin:0;padding:4px 8px" onclick="openA11ySettings()">ACTIVAR</button>
+    </div>
+    <input type="text" id="waSearchInput" class="cmd-input" style="flex:none;margin-bottom:6px" placeholder="Buscar contacto o escribir número..." oninput="filterContacts()" />
+    <div style="display:flex; gap:6px; margin-bottom:6px;">
+      <input type="text" id="waMsgInput" class="cmd-input" placeholder="Mensaje de WhatsApp..." />
+      <button class="send-btn" onclick="sendManualWhatsApp()">ENVIAR</button>
+    </div>
+    <div class="panel-list" id="contactsList"></div>
+  </div>
+
+  <!-- MODAL 3: TARS VISION IA (CAMERA + OCR + DEEPSEEK) -->
+  <div class="modal" id="camModal">
+    <div class="modal-header">
+      <div class="brand-title">📸 VISOR ÓPTICO IA (OCR)</div>
+      <button class="tac-btn" style="padding:6px 12px" onclick="closeCameraModal()">CERRAR ✕</button>
+    </div>
+    <div class="cam-wrap">
+      <video id="camVideo" autoplay playsinline muted></video>
+      <img id="camPreview" alt="Captura TARS" />
+      <div class="hud-reticle">
+        <div style="display:flex;justify-content:space-between;">
+          <span>TARS-OPTIC // HELIO-G91</span>
+          <span id="camModeLabel">CÁMARA TRASERA</span>
+        </div>
+        <div style="text-align:center;font-weight:bold;" id="camStatusHud">[ OBJETIVO FIJADO ]</div>
+        <div style="display:flex;justify-content:space-between;">
+          <span>OCR: TESSERACT</span>
+          <span>IA: DEEPSEEK</span>
+        </div>
+      </div>
+    </div>
+    <canvas id="camCanvas" style="display:none;"></canvas>
+    <input type="text" id="camPromptInput" class="cmd-input" style="flex:none;margin-top:8px" placeholder="Pregunta sobre la foto (opcional, ej: resuelve este ejercicio)..." />
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-top:8px;">
+      <button class="tv-btn" style="padding:10px 4px;font-size:10px" onclick="switchCameraFacing()">🔄 LENTE</button>
+      <button class="tv-btn" style="padding:10px 4px;font-size:10px" onclick="capturePhoto(false)">📸 A LAPTOP</button>
+      <button class="tv-btn ok" style="padding:10px 4px;font-size:10px" onclick="capturePhoto(true)">👁️ ANALIZAR IA</button>
+    </div>
+    <div class="vision-box" id="visionOutput" style="display:none;"></div>
+  </div>
+
+  <!-- MODAL 4: AIRDROP TARS, CLIPBOARD & PDF AUTOPILOT -->
+  <div class="modal" id="airdropModal">
+    <div class="modal-header">
+      <div class="brand-title">📋 AIRDROP TARS & SCRIBE ACADÉMICO</div>
+      <button class="tac-btn" style="padding:6px 12px" onclick="closeModals()">CERRAR ✕</button>
+    </div>
+    <div class="section-title">🧠 TARS SCRIBE: APUNTES DE CLASES A PDF</div>
+    <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;">
+      <input type="text" id="scribeTopicInput" class="cmd-input" placeholder="Materia o tema (ej: Senati, Automatización Industrial, Tesis)..." />
+      <textarea id="scribeNotesInput" class="cmd-input" rows="3" style="resize:none" placeholder="Pega o dicta los apuntes en bruto de la clase para sintetizarlos..."></textarea>
+      <button class="tv-btn ok" style="width:100%" onclick="generateScribePdf()">🎓 SINTETIZAR Y GENERAR APUNTES PDF</button>
+      <div id="scribeStatusBox" style="font-size:10px;color:var(--cyan);display:none;"></div>
+    </div>
+    <div class="section-title">📄 AUTOPILOTO DE DOCUMENTOS & PDF TARS</div>
+    <div style="display:flex; gap:6px; margin-bottom:6px;">
+      <input type="text" id="pdfTopicInput" class="cmd-input" placeholder="Tema del PDF (ej: Auditoría ISO 27001, IA Generativa)..." onkeydown="if(event.key==='Enter')generateStarkPdf()" />
+      <button class="send-btn" onclick="generateStarkPdf()">📄 CREAR PDF</button>
+    </div>
+    <div id="pdfStatusBox" style="font-size:10px;color:var(--cyan);margin-bottom:6px;display:none;"></div>
+    <div class="section-title">PORTAPAPELES UNIFICADO (MÓVIL ⇄ LAPTOP)</div>
+    <textarea id="clipTextBox" class="cmd-input" rows="3" style="flex:none;margin-bottom:6px;resize:none" placeholder="Texto copiado en tu teléfono o laptop..."></textarea>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+      <button class="tv-btn ok" onclick="pushClipboardToLaptop()">📤 ENVIAR A LAPTOP</button>
+      <button class="tv-btn" onclick="pullClipboardFromLaptop()">📥 TRAER DE LAPTOP</button>
+    </div>
+    <div class="section-title">TELEPORTAR ARCHIVO DEL TELÉFONO A LAPTOP</div>
+    <input type="file" id="airdropFileInput" style="display:none" onchange="uploadFileToLaptop()" />
+    <button class="tv-btn ok" style="width:100%" onclick="document.getElementById('airdropFileInput').click()">📁 ELEGIR ARCHIVO Y ENVIAR A LAPTOP</button>
+    <div class="section-title">ARCHIVOS RECIENTES EN LAPTOP (TOCA PARA DESCARGAR)</div>
+    <div class="panel-list" id="airdropFilesList"></div>
+  </div>
+
+  <!-- MODAL 5: CENTINELA RED, WEBCAM, CYBER-OPS & NOTIFICACIONES -->
+  <div class="modal" id="sentinelModal">
+    <div class="modal-header">
+      <div class="brand-title">🛡️ CENTINELA, RADAR & CYBER-OPS</div>
+      <button class="tac-btn" style="padding:6px 12px" onclick="closeModals()">CERRAR ✕</button>
+    </div>
+    <div class="section-title">🛰️ RADAR DE PRESENCIA & CENTINELA ANTIRROBO</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:6px;">
+      <button id="btnProximityRadar" class="tv-btn" onclick="toggleProximityRadar()">🛰️ RADAR PRESENCIA: OFF</button>
+      <button id="btnSentinelTrap" class="tv-btn danger" onclick="toggleSentinelTrap()">🚨 TRAMPA INTRUSO: OFF</button>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:6px;">
+      <button class="tv-btn ok" onclick="scanNetwork()">📡 ESCANEAR WIFI</button>
+      <button class="tv-btn danger" onclick="activateShieldLock()">🔒 BLOQUEAR LAPTOP</button>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:6px;">
+      <button class="tv-btn" style="padding:9px 4px;font-size:10px" onclick="fetchSentinelWebcam()">📷 WEBCAM PC</button>
+      <button class="tv-btn" style="padding:9px 4px;font-size:10px" onclick="testSentinelTrap()">📸 DISPARAR TRAMPA</button>
+      <button class="tv-btn ok" style="padding:9px 4px;font-size:10px" onclick="runCyberOps('nmap', '', '192.168.1.1')">🛡️ NMAP ROUTER</button>
+    </div>
+    <div id="sentinelWebcamWrap" style="display:none;margin-bottom:6px;border:1px solid var(--cyan);border-radius:8px;overflow:hidden;background:#000;">
+      <img id="sentinelWebcamImg" style="width:100%;max-height:175px;object-fit:contain;display:block;" alt="Webcam Laptop" />
+    </div>
+    <div class="section-title">💻 TERMINAL CYBER-OPS (SHELL & NMAP AUDITOR)</div>
+    <div style="display:flex; gap:6px; margin-bottom:6px;">
+      <input type="text" id="cyberCmdInput" class="cmd-input" placeholder="Comando Linux en laptop (ej: ls -la, df -h, uname -a)..." onkeydown="if(event.key==='Enter')runCyberShell()" />
+      <button class="send-btn" onclick="runCyberShell()">EJECUTAR</button>
+    </div>
+    <pre id="cyberOutputBox" style="background:rgba(0,12,28,0.95);border:1px solid rgba(0,240,255,0.35);border-radius:8px;padding:7px;font-size:9.5px;line-height:1.35;color:#8ff8d2;max-height:140px;overflow:auto;white-space:pre-wrap;word-break:break-word;margin-bottom:6px;user-select:text;">Listo para shell remoto, puertos (ss) y escaneo Nmap.</pre>
+    <div id="notifListenerBanner" style="font-size:10px;padding:7px 9px;border-radius:8px;border:1px solid var(--amber);background:rgba(255,170,0,0.12);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;gap:6px;">
+      <span id="notifListenerTxt">Lector de Notificaciones hacia Laptop: DESACTIVADO</span>
+      <button class="chip" style="margin:0;padding:4px 8px" onclick="openNotifSettings()">ACTIVAR</button>
+    </div>
+    <div class="section-title">DISPOSITIVOS DETECTADOS EN TU RED LOCAL</div>
+    <div class="panel-list" id="lanDevicesList" style="max-height:150px"></div>
+    <div class="section-title">ÚLTIMAS NOTIFICACIONES CAPTADAS</div>
+    <div class="panel-list" id="recentNotifsList" style="max-height:120px"></div>
+  </div>
+
+  <!-- MODAL 6: TARS PROTOCOLS, HOLOGRAPHIC DJ & SMART TV -->
+  <div class="modal" id="protoModal">
+    <div class="modal-header">
+      <div class="brand-title">🎬 PROTOCOLOS, D-PAD & SMART TV</div>
+      <button class="tac-btn" style="padding:6px 12px" onclick="closeModals()">CERRAR ✕</button>
+    </div>
+    <div class="section-title">🎵 HOLOGRAPHIC DJ & MEDIA DECK (LAPTOP)</div>
+    <div style="background:rgba(0,115,225,0.14);border:1px solid rgba(0,240,255,0.35);border-radius:8px;padding:7px 9px;margin-bottom:6px;font-size:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
+        <span id="mediaTrackLabel" style="color:var(--cyan);font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Sin reproducción activa</span>
+        <span id="mediaVolLabel" style="color:var(--green);font-weight:bold;flex:none;">VOL --%</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:6px;">
+        <button class="tv-btn" style="padding:8px 4px;font-size:10px" onclick="mediaDeckAction('previous')">⏮ ANTERIOR</button>
+        <button class="tv-btn ok" style="padding:8px 4px;font-size:10px" onclick="mediaDeckAction('play-pause')">⏯ PLAY/PAUSA</button>
+        <button class="tv-btn" style="padding:8px 4px;font-size:10px" onclick="mediaDeckAction('next')">⏭ SIGUIENTE</button>
+        <button class="tv-btn danger" style="padding:8px 4px;font-size:10px" onclick="mediaDeckAction('mute')">🔇 MUTE</button>
+        <button class="tv-btn" style="padding:8px 4px;font-size:10px" onclick="stepLaptopVol(-10)">🔉 VOL -10%</button>
+        <button class="tv-btn" style="padding:8px 4px;font-size:10px" onclick="stepLaptopVol(10)">🔊 VOL +10%</button>
+      </div>
+    </div>
+    <div class="section-title">MACROS MULTI-DISPOSITIVO (SPARK 30 + LAPTOP + TV)</div>
+    <div class="tv-grid" style="margin-top:2px;margin-bottom:8px;">
+      <button class="tv-btn ok" onclick="runProtocol('tesis')">🎓 MODO TESIS / SENATI</button>
+      <button class="tv-btn ok" onclick="runProtocol('turbo')">⚡ OVERCLOCK / TURBO</button>
+      <button class="tv-btn" onclick="runProtocol('cine')">🍿 PROTOCOLO CINE</button>
+      <button class="tv-btn" onclick="runProtocol('fiesta')">⚡ PROTOCOLO FIESTA</button>
+      <button class="tv-btn danger" onclick="runProtocol('escudo')">🛡️ ESCUDO (LOCK)</button>
+      <button class="tv-btn ok" onclick="runProtocol('buenos_dias')">☀️ PROTOCOLO DÍA</button>
+    </div>
+    <div class="section-title">🎮 MANDO VIRTUAL TARS (D-PAD SMART TV)</div>
+    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; max-width:240px; margin:0 auto 8px auto;">
+      <div></div>
+      <button class="tv-btn ok" onclick="tvDpadKey('up')">▲ ARRIBA</button>
+      <div></div>
+      <button class="tv-btn ok" onclick="tvDpadKey('left')">◀ IZQ</button>
+      <button class="tv-btn ok" style="background:var(--cyan);color:#000;font-weight:bold" onclick="tvDpadKey('select')">🔘 OK</button>
+      <button class="tv-btn ok" onclick="tvDpadKey('right')">▶ DER</button>
+      <div></div>
+      <button class="tv-btn ok" onclick="tvDpadKey('down')">▼ ABAJO</button>
+      <div></div>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-bottom:8px;">
+      <button class="tv-btn" onclick="tvDpadKey('back')">↩ ATRÁS</button>
+      <button class="tv-btn" onclick="tvDpadKey('home')">🏠 HOME</button>
+      <button class="tv-btn" onclick="tvDpadKey('settings')">⚙️ AJUSTES</button>
+    </div>
+    <div style="display:flex; gap:6px; margin-bottom:8px;">
+      <input type="text" id="tvDirectTextInput" class="cmd-input" placeholder="Escribir en la TV (búsquedas, claves)..." onkeydown="if(event.key==='Enter')sendDirectTvText()" />
+      <button class="send-btn" onclick="sendDirectTvText()">ESCRIBIR</button>
+    </div>
+    <div class="section-title">📡 TELEPORT MULTIMEDIA CRUZADO</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:8px;">
+      <button class="tv-btn ok" onclick="teleportMedia('tv')">📡 LAPTOP ➔ TV</button>
+      <button class="tv-btn" onclick="teleportMedia('laptop')">💻 TV ➔ LAPTOP</button>
+    </div>
+    <div class="section-title">CONTROL DIRECTO SMART TV</div>
+    <div style="display:flex; gap:6px; margin-bottom:6px;">
+      <input type="text" id="tvYtInput" class="cmd-input" placeholder="Buscar video o música en YouTube TV..." />
+      <button class="send-btn" onclick="tvSearchYt()">PONER</button>
+    </div>
+    <div class="tv-grid">
+      <button class="tv-btn ok" onclick="sendToLaptop('enciende la tv')">⚡ ENCENDER TV</button>
+      <button class="tv-btn danger" onclick="sendToLaptop('apaga la tv')">⏻ APAGAR TV</button>
+      <button class="tv-btn" onclick="sendToLaptop('sube el volumen de la tv')">🔊 VOLUMEN +</button>
+      <button class="tv-btn" onclick="sendToLaptop('baja el volumen de la tv')">🔉 VOLUMEN -</button>
+      <button class="tv-btn" onclick="sendToLaptop('silencia la tv')">🔇 SILENCIAR</button>
+      <button class="tv-btn" onclick="sendToLaptop('pausa la tv')">⏯ PAUSA / PLAY</button>
+      <button class="tv-btn" onclick="sendToLaptop('abre youtube en la tv')">▶ YOUTUBE TV</button>
+      <button class="tv-btn ok" onclick="sendToLaptop('proyecta el hud en la tv')">💠 PROYECTAR HUD</button>
+      <button class="tv-btn" onclick="sendToLaptop('cambia el fondo de la tv')">🌌 FONDO CYBER</button>
+      <button class="tv-btn ok" onclick="closeModals();openTrackpadModal('tv')">📺 VER PANTALLA TV</button>
+    </div>
+  </div>
+
+  <!-- MODAL 7: HOLOGRAPHIC TRACKPAD & LIVE REMOTE DESKTOP -->
+  <div class="modal" id="trackpadModal">
+    <div class="modal-header">
+      <div class="brand-title">🎮 TRACKPAD & ESCRITORIO EN VIVO</div>
+      <button class="tac-btn" style="padding:6px 12px" onclick="closeModals()">CERRAR ✕</button>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:5px; margin-bottom:8px;">
+      <button class="tv-btn ok" id="tpBtnTouch" style="padding:8px 2px;font-size:9.5px" onclick="setTrackpadMode('touch')">🎮 TRACKPAD</button>
+      <button class="tv-btn" id="tpBtnScreen" style="padding:8px 2px;font-size:9.5px" onclick="setTrackpadMode('screen')">🖥️ PANTALLA PC</button>
+      <button class="tv-btn" id="tpBtnTv" style="padding:8px 2px;font-size:9.5px" onclick="setTrackpadMode('tv')">📺 SMART TV</button>
+      <button class="tv-btn" id="tpBtnWebcam" style="padding:8px 2px;font-size:9.5px" onclick="setTrackpadMode('webcam')">📷 WEBCAM PC</button>
+    </div>
+    <div id="liveScreenWrap" style="display:none;position:relative;width:100%;height:220px;border:2px solid var(--cyan);border-radius:12px;overflow:hidden;background:#000;margin-bottom:8px;">
+      <img id="liveScreenImg" style="width:100%;height:100%;object-fit:fill;cursor:crosshair;" onclick="onLiveScreenTap(event)" alt="Escritorio Laptop en Vivo" />
+    </div>
+    <div class="trackpad-area" id="trackpadArea">
+      <div>[ DESLIZA EL DEDO PARA MOVER EL CURSOR ]</div>
+      <div style="font-size:9px;margin-top:6px;opacity:0.75">TOQUE RÁPIDO = CLIC IZQUIERDO</div>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; margin-bottom:8px;">
+      <button class="tv-btn" style="padding:10px 4px;font-size:10px" onclick="remoteInput({action:'click'})">CLIC IZQ</button>
+      <button class="tv-btn" style="padding:10px 4px;font-size:10px" onclick="remoteInput({action:'rclick'})">CLIC DER</button>
+      <button class="tv-btn" style="padding:10px 4px;font-size:10px" onclick="remoteInput({action:'scroll',dy:-1})">▲ SUBIR</button>
+      <button class="tv-btn" style="padding:10px 4px;font-size:10px" onclick="remoteInput({action:'scroll',dy:1})">▼ BAJAR</button>
+    </div>
+    <div style="display:flex; gap:6px; margin-bottom:6px;">
+      <input type="text" id="remoteTypeInput" class="cmd-input" placeholder="Escribir texto en la laptop..." />
+      <button class="send-btn" onclick="sendRemoteText()">ESCRIBIR</button>
+    </div>
+    <div class="chip-row">
+      <button class="chip" onclick="remoteInput({action:'key',key:'Return'})">ENTER</button>
+      <button class="chip" onclick="remoteInput({action:'key',key:'BackSpace'})">BORRAR</button>
+      <button class="chip" onclick="remoteInput({action:'key',key:'space'})">ESPACIO</button>
+      <button class="chip" onclick="remoteInput({action:'key',key:'Escape'})">ESC</button>
+      <button class="chip" onclick="closeModals();openMemoryModal()">🧠 RED / TAILSCALE</button>
+    </div>
+  </div>
+
+  <!-- MODAL 8: MEMORY & NETWORK / TAILSCALE -->
+  <div class="modal" id="memModal">
+    <div class="modal-header">
+      <div class="brand-title">🧠 MEMORIA & RED (LAN / TAILSCALE)</div>
+      <button class="tac-btn" style="padding:6px 12px" onclick="closeModals()">CERRAR ✕</button>
+    </div>
+    <div style="background:rgba(0,115,225,0.14);border:1px solid rgba(0,240,255,0.38);border-radius:10px;padding:8px 10px;margin-bottom:8px;font-size:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+        <span>🌐 <b>TAILSCALE MÓVIL:</b> <span id="phoneTsIp" style="color:var(--green)">Detectando...</span></span>
+        <button class="chip" style="margin:0;padding:4px 8px" onclick="openTailscaleApp()">ABRIR TAILSCALE VPN</button>
+      </div>
+      <div style="margin-bottom:4px;">⚡ <b>TAILSCALE LAPTOP:</b> <span id="laptopTsUrl" style="color:var(--cyan)">No detectada</span></div>
+      <div style="margin-bottom:6px;">🌍 <b>TÚNEL GLOBAL HTTPS:</b> <span id="cloudTunnelUrl" style="color:var(--cyan)">Conectando...</span></div>
+      <div class="chip-row" style="margin:2px 0 0;">
+        <button class="chip" id="btnUseTs" onclick="useDiscoveredTailscale()">🌐 USAR TAILSCALE</button>
+        <button class="chip" id="btnUseCloud" onclick="useDiscoveredCloud()">🌍 USAR TÚNEL GLOBAL</button>
+      </div>
+    </div>
+    <div id="connCard" style="margin-bottom:8px; font-size:11px; border:1px solid rgba(0,240,255,0.38); border-radius:10px; padding:8px 10px;">
+      <div style="margin-bottom:4px; color:var(--cyan);">🌍 SERVIDOR PRINCIPAL (VPS, ej. https://jarvis.tudominio.com):</div>
+      <input type="url" id="serverUrlInput" class="cmd-input" placeholder="https://jarvis.tudominio.com" autocomplete="off" autocapitalize="off" spellcheck="false" style="width:100%;box-sizing:border-box;margin-bottom:6px" />
+      <div style="margin-bottom:4px; color:var(--cyan);">📶 SERVIDOR EN CASA (opcional, ej. http://192.168.1.35:3000):</div>
+      <input type="url" id="lanUrlInput" class="cmd-input" placeholder="(opcional)" autocomplete="off" autocapitalize="off" spellcheck="false" style="width:100%;box-sizing:border-box;margin-bottom:6px" />
+      <div style="margin-bottom:4px; color:var(--cyan);">🔑 TOKEN TARS (STARK_AUTH_TOKEN):</div>
+      <input type="password" id="tokenInput" class="cmd-input" placeholder="pega tu token" autocomplete="off" autocapitalize="off" spellcheck="false" style="width:100%;box-sizing:border-box;margin-bottom:8px" />
+      <button class="tac-btn" style="width:100%;padding:12px;font-size:12px;font-weight:700;letter-spacing:1px" onclick="saveServerUrl()">💾 GUARDAR Y PROBAR CONEXIÓN</button>
+      <div id="connStatus" style="margin-top:6px; opacity:0.9;">Sin probar todavía.</div>
+    </div>
+    <div class="panel-list" id="memList"></div>
+  </div>
+
+<script>
+// === TARS AUTH + utilidades de red (v7) ===
+(function () {
+  const KEY = "zarate_stark_token";
+  // AbortSignal.timeout no existe en WebViews antiguos
+  if (!AbortSignal.timeout) {
+    AbortSignal.timeout = function (ms) { const c = new AbortController(); setTimeout(() => c.abort(), ms); return c.signal; };
+  }
+  window.getStarkToken = () => localStorage.getItem(KEY) || "";
+  window.setStarkToken = (t) => {
+    localStorage.setItem(KEY, String(t || "").trim());
+    if (window.ZarateBridge && window.ZarateBridge.setAuthToken) window.ZarateBridge.setAuthToken(window.getStarkToken());
+  };
+  if (window.ZarateBridge && window.ZarateBridge.setAuthToken) window.ZarateBridge.setAuthToken(window.getStarkToken());
+
+  const origFetch = window.fetch.bind(window);
+  let lastAuthAlert = 0;
+  window.fetch = function (input, init) {
+    const url = typeof input === "string" ? input : (input && input.url) || "";
+    const isJarvis = /\/api\//.test(url) && !/deepseek\.com|google\.com/.test(url);
+    if (isJarvis) {
+      init = Object.assign({}, init || {});
+      const h = new Headers(init.headers || {});
+      const t = window.getStarkToken();
+      if (t) h.set("x-stark-token", t);
+      init.headers = h;
+    }
+    return origFetch(input, init).then((r) => {
+      // Sin prompt() en bucle: un aviso como máximo cada 30 s y abre la configuración
+      if (isJarvis && r.status === 401 && Date.now() - lastAuthAlert > 30000) {
+        lastAuthAlert = Date.now();
+        if (window.onStarkAuthError) window.onStarkAuthError();
+      }
+      return r;
+    });
+  };
+})();
+</script>
+<script>
+window.onerror = function(msg, url, line, col, err) {
+  console.warn("TARS UI Safe Trap:", msg, "line", line);
+  return true;
+};
+window.onunhandledrejection = function(e) {
+  console.warn("TARS Unhandled Rejection Safe Trap:", e.reason);
+  if (e && e.preventDefault) e.preventDefault();
+};
+
+const LS_PRIMARY = "zarate_server_url";
+const LS_LAN = "zarate_lan_url";
+const FALLBACK_DEEPSEEK_KEY = "__DEEPSEEK_KEY__"; // ya no se rellena: el teléfono usa el servidor
+
+// Migración: las URLs trycloudflare caducan y pueden pasar a otra persona → nunca usarlas por defecto
+function sanitizeServerUrl(u) {
+  u = String(u || "").trim().replace(/\/+$/, "");
+  if (!u) return "";
+  if (!/^https?:\/\//i.test(u)) u = (/^(\d+\.){3}\d+(:\d+)?$/.test(u) ? "http://" : "https://") + u;
+  return u;
+}
+let primaryServer = sanitizeServerUrl(localStorage.getItem(LS_PRIMARY));
+let lanServer = sanitizeServerUrl(localStorage.getItem(LS_LAN));
+if (/trycloudflare\.com/i.test(primaryServer)) primaryServer = "";
+// Migración: una IP privada guardada como servidor principal pasa a "servidor en casa"
+const PRIVATE_URL_RX = /^http:\/\/(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|127\.)/i;
+// Solo UNA vez (al actualizar desde v6); después se respeta lo que el usuario guarde
+if (!localStorage.getItem("zarate_migrated_v7")) {
+  if (/trycloudflare\.com/i.test(localStorage.getItem(LS_PRIMARY) || "")) localStorage.setItem(LS_PRIMARY, "");
+  if (PRIVATE_URL_RX.test(primaryServer)) {
+    if (!lanServer) { lanServer = primaryServer; localStorage.setItem(LS_LAN, lanServer); }
+    primaryServer = ""; localStorage.setItem(LS_PRIMARY, "");
+  }
+  localStorage.setItem("zarate_migrated_v7", "1");
+}
+let activeServer = primaryServer || lanServer || "";
+let savedTailscaleUrl = localStorage.getItem("zarate_tailscale_url") || "";
+let savedCloudUrl = localStorage.getItem("zarate_cloud_url") || "";
+if (/trycloudflare\.com/i.test(savedCloudUrl)) { savedCloudUrl = ""; localStorage.removeItem("zarate_cloud_url"); } // caducadas; el servidor reporta la vigente
+let lastServerPick = 0;
+let authFailed = false;
+let localHistoryQueue = []; // interacciones resueltas en el teléfono, pendientes de subir
+try { localHistoryQueue = JSON.parse(localStorage.getItem("zarate_local_queue") || "[]") || []; } catch (e) {}
+let lastUserText = "";
+let commandInFlight = false;
+let isLaptopOnline = false;
+let lastLatencyMs = 0;
+let micState = "IDLE";
+let micRms = 0;
+let torchState = false;
+let currentAudio = null;
+let allContacts = [];
+let camStream = null;
+let camFacing = "environment";
+let pendingIncomingNotif = null;
+let handsFreeActive = false;
+let trackpadMode = "touch";
+let liveVisionTimer = null;
+let currentLaptopVol = 70;
+let isSyncing = false;
+
+function getSafeMemoryStore() {
+  try {
+    const raw = localStorage.getItem("zarate_memory_store");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") {
+        parsed.memories = Array.isArray(parsed.memories) ? parsed.memories : [];
+        parsed.emotionalState = parsed.emotionalState || { mood: "Omni-TARS Activa", emoji: "⚡", affinity: 70, feelingNote: "Sincronizada." };
+        parsed.conversationHistory = Array.isArray(parsed.conversationHistory) ? parsed.conversationHistory : [];
+        return parsed;
+      }
+    }
+  } catch (e) {}
+  return {
+    memories: [
+      { id: "init-1", fact: "Propietario: Zarate — Tecno Spark 30 (KL6) Cyberpunk Edition.", category: "personal", createdAt: new Date().toISOString() }
+    ],
+    emotionalState: { mood: "Omni-TARS Activa", emoji: "⚡", affinity: 70, feelingNote: "Sincronizada." },
+    conversationHistory: []
+  };
+}
+let memoryStore = getSafeMemoryStore();
+
+function fillConnForm() {
+  const a = document.getElementById("serverUrlInput"); if (a) a.value = primaryServer;
+  const b = document.getElementById("lanUrlInput"); if (b) b.value = lanServer;
+  const c = document.getElementById("tokenInput"); if (c) c.value = window.getStarkToken();
+}
+fillConnForm();
+
+// El indicador de conexión (arriba a la derecha) llamaba a esta función, que no existía
+function openNetworkModal() {
+  fillConnForm();
+  refreshNetworkModalInfo();
+  openMemoryModal();
+}
+
+function setConnStatus(html, ok) {
+  const el = document.getElementById("connStatus");
+  if (el) { el.innerHTML = html; el.style.color = ok === true ? "var(--green)" : ok === false ? "var(--amber)" : ""; }
+}
+
+function setActiveServer(u) {
+  activeServer = u;
+  if (window.ZarateBridge && window.ZarateBridge.setActiveServer) window.ZarateBridge.setActiveServer(u);
+}
+if (activeServer) setActiveServer(activeServer);
+
+function serverCandidates() {
+  return [activeServer, lanServer, primaryServer].filter((u, i, a) => u && a.indexOf(u) === i);
+}
+
+/** Elige un servidor que responda (/api/health es público y ligero). Cache 20 s. */
+async function pickServer(force = false) {
+  if (!force && isLaptopOnline && activeServer && Date.now() - lastServerPick < 20000) return activeServer;
+  // En casa probamos primero la LAN (más rápida); fuera, el VPS
+  const order = [lanServer, primaryServer, activeServer].filter((u, i, a) => u && a.indexOf(u) === i);
+  for (const u of order) {
+    try {
+      const r = await fetch(u + "/api/health", { signal: AbortSignal.timeout(u.startsWith("https") ? 6000 : 1800), cache: "no-store" });
+      if (r.ok) { setActiveServer(u); lastServerPick = Date.now(); return u; }
+    } catch (e) {}
+  }
+  return null;
+}
+
+function persistLocalQueue() {
+  localHistoryQueue = localHistoryQueue.slice(-40);
+  localStorage.setItem("zarate_local_queue", JSON.stringify(localHistoryQueue));
+}
+
+window.onStarkAuthError = function () {
+  authFailed = true;
+  setConnStatus("⛔ El servidor rechazó el token (401). Revisa el TOKEN TARS.", false);
+  appendMsg("jarvis", "⛔ El servidor rechazó el token de acceso. Abre <b>RED</b> y pega tu STARK_AUTH_TOKEN.");
+  openMemoryModal();
+};
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+
+let chatExpanded = false;
+function toggleChatExpand() {
+  chatExpanded = !chatExpanded;
+  const box = document.getElementById("consoleBox");
+  const btn = document.getElementById("btnExpandChat");
+  if (chatExpanded) {
+    box.classList.add("expanded");
+    if (btn) btn.innerText = "⛶ REDUCIR";
+  } else {
+    box.classList.remove("expanded");
+    if (btn) btn.innerText = "⛶ EXPANDIR";
+  }
+  box.scrollTop = box.scrollHeight;
+}
+
+function clearChatConsole() {
+  const box = document.getElementById("consoleBox");
+  box.innerHTML = `
+    <div class="msg jarvis">
+      <div class="msg-header">
+        <span class="msg-author jarvis">⚡ TARS • ASISTENTE TARS</span>
+        <span class="msg-time">AHORA</span>
+      </div>
+      <div class="msg-body">Consola reiniciada. Mi memoria sigue intacta. La tuya, no lo sé.</div>
+    </div>
+  `;
+}
+
+function quickAsk(text) {
+  document.getElementById("cmdInput").value = text;
+  sendCommand(text);
+}
+
+// Solo permite formato básico. Antes las respuestas del servidor/IA se inyectaban como HTML
+// crudo: una respuesta con <img onerror=...> podía usar ZarateBridge (root, WhatsApp, llamadas).
+const SAFE_TAGS = new Set(["B", "I", "EM", "STRONG", "BR", "CODE", "PRE", "UL", "OL", "LI", "P", "SPAN", "A"]);
+function sanitizeHtml(html) {
+  const tpl = document.createElement("template");
+  tpl.innerHTML = String(html == null ? "" : html);
+  const walk = (node) => {
+    [...node.childNodes].forEach((ch) => {
+      if (ch.nodeType === 1) {
+        if (!SAFE_TAGS.has(ch.tagName)) { ch.replaceWith(document.createTextNode(ch.textContent || "")); return; }
+        [...ch.attributes].forEach((a) => {
+          const keepHref = ch.tagName === "A" && a.name === "href" && /^https?:\/\//i.test(a.value);
+          if (!keepHref) ch.removeAttribute(a.name);
+        });
+        if (ch.tagName === "A") { ch.setAttribute("target", "_blank"); ch.setAttribute("rel", "noopener"); }
+        walk(ch);
+      } else if (ch.nodeType !== 3) {
+        ch.remove();
+      }
+    });
+  };
+  walk(tpl.content);
+  return tpl.innerHTML;
+}
+function formatReply(text) {
+  // Texto plano del servidor → HTML seguro con **negritas** y saltos de línea
+  return escapeHtml(text).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\n/g, "<br/>");
+}
+
+function appendMsg(role, text) {
+  text = sanitizeHtml(text);
+  const box = document.getElementById("consoleBox");
+  const div = document.createElement("div");
+  div.className = "msg " + (role === "user" ? "user" : "jarvis");
+
+  const now = new Date();
+  const timeStr = String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0');
+
+  const headerHtml = role === "user"
+    ? `<div class="msg-header">
+         <span class="msg-author user">👤 ZÁRATE // COMANDANTE</span>
+         <span class="msg-time">${timeStr}</span>
+       </div>`
+    : `<div class="msg-header">
+         <span class="msg-author jarvis">⚡ TARS • ASISTENTE TARS</span>
+         <span class="msg-time">${timeStr}</span>
+       </div>`;
+
+  let bodyHtml = `<div class="msg-body">${text}</div>`;
+  if (role === "jarvis" && /¿desea(?:s)?\s+(?:que\s+)?(?:se\s+los\s+lea|te\s+los\s+lea|leerlos)/i.test(text)) {
+    bodyHtml += `
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button class="tv-btn ok" style="padding:6px 14px; font-size:10px; border-radius:12px; cursor:pointer;" onclick="quickAsk('Sí, léelos por favor')">🔊 SÍ, LEERLOS</button>
+        <button class="tv-btn danger" style="padding:6px 14px; font-size:10px; border-radius:12px; cursor:pointer;" onclick="quickAsk('No, después')">✕ MÁS TARDE</button>
+      </div>`;
+  }
+
+  div.innerHTML = headerHtml + bodyHtml;
+  box.appendChild(div);
+  while (box.children.length > 120) box.removeChild(box.firstChild);
+  box.scrollTop = box.scrollHeight;
+}
+
+function getLocalReminders() {
+  if (window.ZarateBridge && window.ZarateBridge.getRemindersJson) {
+    try { return JSON.parse(window.ZarateBridge.getRemindersJson()); } catch (e) {}
+  }
+  return [];
+}
+
+function updatePhoneTelemetry() {
+  if (window.ZarateBridge && window.ZarateBridge.getPhoneTelemetry) {
+    try {
+      const t = JSON.parse(window.ZarateBridge.getPhoneTelemetry());
+      document.getElementById("phBat").innerText = (t.charging ? "⚡ " : "") + t.battery + "%";
+      document.getElementById("phTemp").innerText = t.tempC + "°C";
+      document.getElementById("phVol").innerText = t.volumePct + "%";
+      document.getElementById("phRam").innerText = (t.ramFreeMb / 1024).toFixed(1) + " / " + (t.ramTotalMb / 1024).toFixed(1) + " GB";
+      document.getElementById("phBar").style.width = t.battery + "%";
+      torchState = Boolean(t.torchOn);
+      document.getElementById("btnTorch").className = "tac-btn" + (torchState ? " active" : "");
+
+      const a11yOk = Boolean(t.a11yEnabled);
+      const a11yBanner = document.getElementById("a11yBanner");
+      const a11yTxt = document.getElementById("a11yStatusText");
+      a11yBanner.style.borderColor = a11yOk ? "var(--green)" : "var(--amber)";
+      a11yBanner.style.background = a11yOk ? "rgba(0,255,170,0.12)" : "rgba(255,170,0,0.12)";
+      a11yTxt.innerText = a11yOk ? "Auto-envío WhatsApp sin tocar pantalla: ACTIVO" : "Auto-envío WhatsApp: toca ACTIVAR si quieres envío 100% automático";
+
+      if (window.ZarateBridge.isNotificationListenerEnabled) {
+        const nlOk = window.ZarateBridge.isNotificationListenerEnabled();
+        const nb = document.getElementById("notifListenerBanner");
+        const nt = document.getElementById("notifListenerTxt");
+        nb.style.borderColor = nlOk ? "var(--green)" : "var(--amber)";
+        nb.style.background = nlOk ? "rgba(0,255,170,0.12)" : "rgba(255,170,0,0.12)";
+        nt.innerText = nlOk ? "Lector de Notificaciones hacia Laptop: ACTIVO" : "Lector de Notificaciones hacia Laptop: DESACTIVADO";
+      }
+      return t;
+    } catch (e) {}
+  }
+  return { device: "TECNO Spark 30", battery: 100, charging: false, tempC: 32, ramFreeMb: 5200, ramTotalMb: 8192, torchOn: torchState, volumePct: 75 };
+}
+
+async function syncWithLaptop(manual = false) {
+  if (isSyncing) return false;
+  isSyncing = true;
+  try {
+    const phoneTel = updatePhoneTelemetry();
+    const rems = getLocalReminders();
+    const remCountEl = document.getElementById("remCount");
+    if (remCountEl) remCountEl.innerText = rems.filter(r => !r.done).length;
+
+    if (!primaryServer && !lanServer) {
+      markOffline("SIN SERVIDOR");
+      if (manual) appendMsg("jarvis", "Configura la URL del servidor y tu token en <b>RED</b>.");
+      return false;
+    }
+
+    // Solo enviamos lo NUEVO del teléfono (antes se reenviaba todo el historial cada 3.5 s)
+    const sendingQueue = localHistoryQueue.slice();
+    const payload = {
+      phoneTelemetry: phoneTel,
+      conversationHistory: sendingQueue,
+      emotionalState: memoryStore.emotionalState || {},
+      reminders: rems
+    };
+    if (pendingIncomingNotif) payload.incomingNotification = pendingIncomingNotif;
+
+    const baseUrl = await pickServer(manual);
+    if (!baseUrl) {
+      markOffline("SIN CONEXIÓN");
+      if (manual) {
+        setConnStatus("⚠️ Ningún servidor respondió. Revisa la URL y tu internet.", false);
+        appendMsg("jarvis", "No pude contactar con el servidor (" + escapeHtml(serverCandidates().join(", ")) + ").");
+      }
+      return false;
+    }
+
+    const t0 = performance.now();
+    const res = await fetch(baseUrl + "/api/mobile-sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(baseUrl.startsWith("https") ? 9000 : 4000)
+    });
+    if (res.status === 401) { markOffline("TOKEN INVÁLIDO"); return false; }
+    if (!res.ok) { markOffline("ERROR " + res.status); lastServerPick = 0; return false; }
+
+    const data = await res.json();
+    authFailed = false;
+    lastLatencyMs = Math.max(1, Math.round(performance.now() - t0));
+    if (payload.incomingNotification === pendingIncomingNotif) pendingIncomingNotif = null;
+    localHistoryQueue = localHistoryQueue.slice(sendingQueue.length);
+    persistLocalQueue();
+    isLaptopOnline = true;
+
+    if (data.globalEndpoints) {
+      // Solo informativo: ya NO cambiamos de servidor automáticamente a lo que diga la respuesta
+      if (data.globalEndpoints.tailscaleUrl) {
+        savedTailscaleUrl = data.globalEndpoints.tailscaleUrl;
+        localStorage.setItem("zarate_tailscale_url", savedTailscaleUrl);
+      }
+      if (data.globalEndpoints.cloudTunnelUrl) {
+        savedCloudUrl = data.globalEndpoints.cloudTunnelUrl;
+        localStorage.setItem("zarate_cloud_url", savedCloudUrl);
+      }
+      refreshNetworkModalInfo();
+    }
+
+    const dot = document.getElementById("syncDot");
+    if (dot) { dot.style.background = "#00ffaa"; dot.style.boxShadow = "0 0 8px #00ffaa"; }
+    const modeTag = baseUrl === lanServer ? "CASA" : (/^https:/.test(baseUrl) ? "NUBE" : "LAN");
+    const st = document.getElementById("syncText");
+    if (st) st.innerText = modeTag + " // " + lastLatencyMs + "ms";
+
+    if (data.laptopStats) {
+      const cpuVal = data.laptopStats.cpuPercent ?? data.laptopStats.cpuUsage ?? 0;
+      const ramVal = data.laptopStats.ramPercent ?? data.laptopStats.ramUsage ?? 0;
+      document.getElementById("pcCpu").innerText = "CPU " + cpuVal + "%";
+      document.getElementById("pcRam").innerText = ramVal + "% (" + data.laptopStats.ramUsedGb + "GB)";
+      document.getElementById("pcBar").style.width = Math.min(100, cpuVal) + "%";
+    }
+    if (data.memoryStore) {
+      memoryStore = data.memoryStore;
+      localStorage.setItem("zarate_memory_store", JSON.stringify(memoryStore));
+      updateMemoryUI();
+    }
+    if (typeof data.proximityGuardian === "boolean") {
+      proximityRadarEnabled = data.proximityGuardian;
+      updateProximityButtonUI();
+    }
+    if (Array.isArray(data.pendingPhoneCommands)) {
+      for (const pc of data.pendingPhoneCommands) {
+        if (pc && pc.text) {
+          appendMsg("jarvis", "<i>[ORDEN DESDE LAPTOP]</i> " + escapeHtml(pc.text));
+          await sendCommand(pc.text, true);
+        }
+      }
+    }
+    if (manual) {
+      setConnStatus("✅ Conectado a " + escapeHtml(baseUrl) + " (" + lastLatencyMs + " ms).", true);
+      appendMsg("jarvis", "Sincronización completa (" + lastLatencyMs + " ms en <b>" + escapeHtml(baseUrl) + "</b>). " + (memoryStore.memories || []).length + " recuerdos activos.");
+    }
+    return true;
+  } catch (err) {
+    lastServerPick = 0;
+    markOffline("SIN CONEXIÓN");
+    return false;
+  } finally {
+    isSyncing = false;
+  }
+}
+
+function markOffline(label) {
+  isLaptopOnline = false;
+  const dot = document.getElementById("syncDot");
+  if (dot) { dot.style.background = label === "TOKEN INVÁLIDO" ? "#ffaa00" : "#ff4d6d"; dot.style.boxShadow = "0 0 8px " + dot.style.background; }
+  const syncTxt = document.getElementById("syncText");
+  if (syncTxt) syncTxt.innerText = label || "AUTÓNOMO MÓVIL";
+  updateMemoryUI();
+}
+
+function updateMemoryUI() {
+  document.getElementById("memCount").innerText = (memoryStore.memories || []).length;
+  const em = memoryStore.emotionalState || { mood: "Activa", emoji: "⚡", affinity: 70 };
+  document.getElementById("moodPill").innerText = em.emoji + " " + em.mood + " | Afinidad: " + em.affinity + "%";
+
+  const list = document.getElementById("memList");
+  list.innerHTML = "";
+  (memoryStore.memories || []).slice().reverse().forEach(m => {
+    const d = document.createElement("div");
+    d.className = "list-item";
+    d.innerHTML = "<div><b style='color:var(--cyan)'>[" + escapeHtml((m.category || "memoria").toUpperCase()) + "]</b> " + escapeHtml(m.fact) + "</div>";
+    list.appendChild(d);
+  });
+}
+
+/* ---------------- REMINDERS ---------------- */
+function openRemindersModal() {
+  renderRemindersList();
+  const d = new Date(Date.now() + 10 * 60000);
+  const pad = n => String(n).padStart(2, "0");
+  document.getElementById("remDateTime").value = d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  document.getElementById("remModal").classList.add("open");
+}
+function quickReminder(mins) {
+  const txt = document.getElementById("remTextInput").value.trim() || "Revisar sistema TARS";
+  scheduleReminderMs(Date.now() + mins * 60000, txt);
+  document.getElementById("remTextInput").value = "";
+}
+function customReminder() {
+  const txt = document.getElementById("remTextInput").value.trim() || "Recordatorio programado";
+  const dt = document.getElementById("remDateTime").value;
+  const ms = dt ? new Date(dt).getTime() : (Date.now() + 5 * 60000);
+  scheduleReminderMs(ms, txt);
+  document.getElementById("remTextInput").value = "";
+}
+function scheduleReminderMs(timeMs, text) {
+  if (window.ZarateBridge && window.ZarateBridge.addReminder) {
+    window.ZarateBridge.addReminder(timeMs, text);
+  }
+  const dt = new Date(timeMs);
+  const hhmm = dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  renderRemindersList();
+  syncWithLaptop(false);
+  const msg = "Recordatorio agendado para las " + hhmm + ": \"" + escapeHtml(text) + "\". También te avisaré en tu laptop.";
+  appendMsg("jarvis", msg);
+  speakReply("Recordatorio agendado para las " + hhmm + ": " + text, null);
+}
+function renderRemindersList() {
+  const list = document.getElementById("remList");
+  const rems = getLocalReminders();
+  document.getElementById("remCount").innerText = rems.filter(r => !r.done).length;
+  list.innerHTML = "";
+  if (rems.length === 0) {
+    list.innerHTML = "<div class='list-item'>No hay recordatorios programados todavía.</div>";
+    return;
+  }
+  rems.slice().sort((a, b) => a.time - b.time).forEach(r => {
+    const dt = new Date(r.time);
+    const label = dt.toLocaleDateString([], { day: "2-digit", month: "short" }) + " " + dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const div = document.createElement("div");
+    div.className = "list-item";
+    div.innerHTML = "<div><b style='color:" + (r.done ? "#88a" : "var(--cyan)") + "'>" + (r.done ? "✓ " : "⏰ ") + label + "</b><br/>" + escapeHtml(r.text) + "</div>"
+      + "<button class='chip' style='margin:0;border-color:var(--danger);color:#ffb3c9' onclick=\"delReminder('" + r.id + "')\">BORRAR</button>";
+    list.appendChild(div);
+  });
+}
+function delReminder(id) {
+  if (window.ZarateBridge) window.ZarateBridge.deleteReminder(id);
+  renderRemindersList();
+  syncWithLaptop(false);
+}
+window.onNativeReminderFired = function(text) {
+  const b = document.getElementById("alertBanner");
+  b.innerText = "⏰ RECORDATORIO: " + text;
+  b.classList.add("show");
+  appendMsg("jarvis", "⏰ <b>RECORDATORIO:</b> " + escapeHtml(text));
+  speakReply("Disculpa la interrupción. Tienes un recordatorio: " + text, null);
+  renderRemindersList();
+};
+
+/* ---------------- CONTACTS & WHATSAPP ---------------- */
+function openWhatsAppModal() {
+  updatePhoneTelemetry();
+  if (window.ZarateBridge && window.ZarateBridge.getContactsJson) {
+    try { allContacts = JSON.parse(window.ZarateBridge.getContactsJson()); } catch (e) { allContacts = []; }
+  }
+  filterContacts();
+  document.getElementById("waModal").classList.add("open");
+}
+function filterContacts() {
+  const q = document.getElementById("waSearchInput").value.trim().toLowerCase();
+  const list = document.getElementById("contactsList");
+  list.innerHTML = "";
+  const filtered = allContacts.filter(c => !q || c.name.toLowerCase().includes(q) || c.phone.includes(q)).slice(0, 60);
+  if (filtered.length === 0) {
+    list.innerHTML = "<div class='list-item'>No se encontraron contactos. Escribe un número directo arriba o acepta el permiso de Contactos.</div>";
+    return;
+  }
+  filtered.forEach(c => {
+    const div = document.createElement("div");
+    div.className = "list-item";
+    div.innerHTML = "<div onclick=\"selectContact('" + escapeHtml(c.name) + "')\" style='flex:1;cursor:pointer'><b style='color:var(--cyan)'>" + escapeHtml(c.name) + "</b><br/><span>" + escapeHtml(c.phone) + "</span></div>"
+      + "<button class='chip' style='margin:0' onclick=\"quickCall('" + escapeHtml(c.name) + "')\">📞</button>"
+      + "<button class='chip' style='margin:0;border-color:var(--green);color:var(--green)' onclick=\"quickWa('" + escapeHtml(c.name) + "')\">💬</button>";
+    list.appendChild(div);
+  });
+}
+function selectContact(name) { document.getElementById("waSearchInput").value = name; }
+function quickWa(target) {
+  const msg = document.getElementById("waMsgInput").value.trim() || "Hola, te escribo desde TARS";
+  if (window.ZarateBridge) {
+    const res = window.ZarateBridge.sendWhatsApp(target, msg, true);
+    closeModals();
+    finishLocalInteraction(res);
+  }
+}
+function quickCall(target) {
+  if (window.ZarateBridge) {
+    const res = window.ZarateBridge.callContact(target);
+    closeModals();
+    finishLocalInteraction(res);
+  }
+}
+function sendManualWhatsApp() {
+  const target = document.getElementById("waSearchInput").value.trim();
+  if (!target) return;
+  quickWa(target);
+}
+function openA11ySettings() { if (window.ZarateBridge) window.ZarateBridge.openAccessibilitySettings(); }
+window.onNativeWhatsAppSent = function() { appendMsg("jarvis", "✅ Mensaje enviado automáticamente por WhatsApp."); };
+
+/* ---------------- TARS VISION IA (CAMERA + OCR + DEEPSEEK) ---------------- */
+async function openCameraModal(facing = "environment", autoShoot = false, autoAnalyze = false) {
+  camFacing = facing || "environment";
+  document.getElementById("camPreview").style.display = "none";
+  document.getElementById("camVideo").style.display = "block";
+  document.getElementById("visionOutput").style.display = "none";
+  document.getElementById("camModeLabel").innerText = camFacing === "user" ? "CÁMARA FRONTAL (SELFIE)" : "CÁMARA TRASERA";
+  document.getElementById("camStatusHud").innerText = autoShoot
+    ? (autoAnalyze ? "[ ESCANEO IA EN 1.5s ]" : "[ CAPTURA AUTOMÁTICA EN 1.5s ]")
+    : "[ OBJETIVO FIJADO ]";
+  document.getElementById("camModal").classList.add("open");
+  await startCameraStream();
+  if (autoShoot) {
+    setTimeout(() => capturePhoto(autoAnalyze), 1500);
+  }
+}
+async function startCameraStream() {
+  stopCameraStream();
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: camFacing, width: { ideal: 1280 }, height: { ideal: 960 } },
+      audio: false
+    });
+    document.getElementById("camVideo").srcObject = camStream;
+  } catch (e) {
+    document.getElementById("camStatusHud").innerText = "ERROR DE CÁMARA: " + e.message;
+  }
+}
+function stopCameraStream() {
+  if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+}
+function switchCameraFacing() {
+  camFacing = camFacing === "environment" ? "user" : "environment";
+  document.getElementById("camModeLabel").innerText = camFacing === "user" ? "CÁMARA FRONTAL (SELFIE)" : "CÁMARA TRASERA";
+  startCameraStream();
+}
+function closeCameraModal() {
+  stopCameraStream();
+  document.getElementById("camModal").classList.remove("open");
+}
+async function capturePhoto(analyze) {
+  const video = document.getElementById("camVideo");
+  const canvas = document.getElementById("camCanvas");
+  const preview = document.getElementById("camPreview");
+  const vOut = document.getElementById("visionOutput");
+  if (!video.videoWidth) {
+    document.getElementById("camStatusHud").innerText = "ESPERANDO SENSOR ÓPTICO...";
+    return;
+  }
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const cctx = canvas.getContext("2d");
+  cctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+  preview.src = dataUrl;
+  preview.style.display = "block";
+  video.style.display = "none";
+  if (window.ZarateBridge) window.ZarateBridge.vibrate(60);
+
+  if (!isLaptopOnline) {
+    document.getElementById("camStatusHud").innerText = "[ CAPTURADA (SIN LAPTOP) ]";
+    finishLocalInteraction("Foto capturada localmente. Conéctate a la laptop para enviarla o analizarla con OCR.");
+    return;
+  }
+
+  document.getElementById("camStatusHud").innerText = analyze ? "[ ANALIZANDO OCR + IA... ]" : "[ ENVIANDO A LAPTOP... ]";
+  const prompt = document.getElementById("camPromptInput").value.trim();
+  try {
+    const r = await fetch(activeServer + "/api/mobile-photo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: dataUrl, open: !analyze, analyze: Boolean(analyze), prompt })
+    });
+    if (r.ok) {
+      const j = await r.json();
+      if (analyze) {
+        document.getElementById("camStatusHud").innerText = "[ ANÁLISIS IA COMPLETADO ✓ ]";
+        vOut.style.display = "block";
+        vOut.innerHTML = (j.ocrText ? "<b style='color:var(--cyan)'>OCR:</b> " + escapeHtml(j.ocrText.slice(0, 260)) + "<br/><br/>" : "")
+          + "<b style='color:var(--green)'>TARS:</b> " + escapeHtml(j.reply || "Análisis terminado.");
+        appendMsg("jarvis", "👁️ " + escapeHtml(j.reply || "Análisis visual completado."));
+        speakReply(j.reply || "Análisis visual completado.", j.audioUrls || []);
+      } else {
+        document.getElementById("camStatusHud").innerText = "[ ENVIADA A LAPTOP ✓ ]";
+        finishLocalInteraction("Foto enviada y abierta en tu laptop: " + escapeHtml(j.path || "Imágenes/Jearvis"));
+        setTimeout(() => closeCameraModal(), 1400);
+      }
+      return;
+    }
+  } catch (e) {}
+  document.getElementById("camStatusHud").innerText = "[ ERROR AL SUBIR ]";
+}
+
+/* ---------------- AIRDROP TARS & UNIFIED CLIPBOARD ---------------- */
+async function openAirDropModal() {
+  if (window.ZarateBridge && window.ZarateBridge.getPhoneClipboard) {
+    const c = window.ZarateBridge.getPhoneClipboard();
+    if (c) document.getElementById("clipTextBox").value = c;
+  }
+  document.getElementById("airdropModal").classList.add("open");
+  await refreshLaptopClipboardAndFiles();
+}
+async function refreshLaptopClipboardAndFiles() {
+  if (!isLaptopOnline) return;
+  try {
+    const res = await fetch(activeServer + "/api/clipboard");
+    if (!res.ok) return;
+    const data = await res.json();
+    const list = document.getElementById("airdropFilesList");
+    list.innerHTML = "";
+    (data.files || []).forEach(f => {
+      const kb = Math.max(1, Math.round((f.size || 0) / 1024));
+      const div = document.createElement("div");
+      div.className = "list-item";
+      div.innerHTML = "<div><b style='color:var(--cyan)'>" + escapeHtml(f.name) + "</b><br/><span>" + escapeHtml(f.folder) + " • " + kb + " KB</span></div>"
+        + "<a class='chip' style='margin:0;text-decoration:none' href='" + activeServer + "/api/clipboard?download=" + encodeURIComponent(f.name) + "' download>⬇ BAJAR</a>";
+      list.appendChild(div);
+    });
+    if ((data.files || []).length === 0) {
+      list.innerHTML = "<div class='list-item'>No hay archivos recientes en Descargas o Jearvis.</div>";
+    }
+  } catch (e) {}
+}
+async function pushClipboardToLaptop() {
+  let txt = document.getElementById("clipTextBox").value;
+  if (!txt && window.ZarateBridge) txt = window.ZarateBridge.getPhoneClipboard();
+  if (!txt || !isLaptopOnline) return;
+  const r = await fetch(activeServer + "/api/clipboard", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "set_clipboard", text: txt })
+  });
+  if (r.ok) {
+    finishLocalInteraction("Portapapeles enviado a tu laptop. Ya puedes pegarlo con Ctrl+V.");
+  }
+}
+async function pullClipboardFromLaptop() {
+  if (!isLaptopOnline) return;
+  const r = await fetch(activeServer + "/api/clipboard");
+  if (r.ok) {
+    const j = await r.json();
+    const txt = j.clipboardText || "";
+    document.getElementById("clipTextBox").value = txt;
+    if (window.ZarateBridge && txt) window.ZarateBridge.setPhoneClipboard(txt);
+    finishLocalInteraction(txt ? "Portapapeles copiado desde tu laptop al Spark 30." : "El portapapeles de tu laptop está vacío.");
+  }
+}
+function uploadFileToLaptop() {
+  const input = document.getElementById("airdropFileInput");
+  const file = input.files && input.files[0];
+  if (!file || !isLaptopOnline) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    const res = await fetch(activeServer + "/api/clipboard", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "send_file", filename: file.name, base64: reader.result })
+    });
+    if (res.ok) {
+      const j = await res.json();
+      finishLocalInteraction("Archivo \"" + file.name + "\" teleportado a tu laptop en " + (j.path || "StarkAirDrop"));
+      refreshLaptopClipboardAndFiles();
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+async function generateStarkPdf(customTopic) {
+  const inp = document.getElementById("pdfTopicInput");
+  const topic = String(customTopic || (inp ? inp.value : "") || "").trim();
+  if (!topic) {
+    appendMsg("jarvis", "Indica el tema del PDF primero.");
+    return;
+  }
+  if (!isLaptopOnline) {
+    finishLocalInteraction("El Autopiloto PDF requiere conexión activa con tu laptop.");
+    return;
+  }
+  const stBox = document.getElementById("pdfStatusBox");
+  if (stBox) {
+    stBox.style.display = "block";
+    stBox.innerText = "⏳ Generando informe PDF con DeepSeek sobre \"" + topic + "\"...";
+  }
+  appendMsg("jarvis", "⏳ Generando PDF técnico sobre <b>" + escapeHtml(topic) + "</b> en TARS AirDrop...");
+  try {
+    const r = await fetch(activeServer + "/api/doc-gen", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic, openOnPc: true })
+    });
+    if (r.ok) {
+      const j = await r.json();
+      if (j.success) {
+        if (inp && !customTopic) inp.value = "";
+        const dlHref = activeServer + j.downloadUrl;
+        const linkHtml = "<a class='chip' style='margin:0 0 0 6px;text-decoration:none' href='" + dlHref + "' download>⬇ DESCARGAR PDF</a>";
+        if (stBox) {
+          stBox.innerHTML = "✅ Listo: <b>" + escapeHtml(j.fileName) + "</b>" + linkHtml;
+        }
+        appendMsg("jarvis", "📄 " + escapeHtml(j.summary || "PDF listo.") + " " + linkHtml);
+        speakReply("Documento PDF sobre " + topic + " generado y listo en tu laptop y AirDrop.", null);
+        refreshLaptopClipboardAndFiles();
+        return;
+      }
+    }
+  } catch (e) {}
+  if (stBox) stBox.innerText = "⚠️ Error generando el PDF.";
+  finishLocalInteraction("No pude generar el PDF en este momento.");
+}
+
+async function generateScribePdf() {
+  const tInp = document.getElementById("scribeTopicInput");
+  const nInp = document.getElementById("scribeNotesInput");
+  const topic = (tInp ? tInp.value : "").trim() || "Apuntes Académicos";
+  const notes = (nInp ? nInp.value : "").trim();
+  if (!notes) {
+    appendMsg("jarvis", "Por favor ingresa o dicta los apuntes de la clase o tema.");
+    return;
+  }
+  if (!isLaptopOnline) {
+    finishLocalInteraction("TARS Scribe requiere conexión activa con tu laptop.");
+    return;
+  }
+  const stBox = document.getElementById("scribeStatusBox");
+  if (stBox) {
+    stBox.style.display = "block";
+    stBox.innerText = "⏳ TARS Scribe sintetizando apuntes estructurados en PDF...";
+  }
+  appendMsg("jarvis", "⏳ TARS Scribe sintetizando apuntes de <b>" + escapeHtml(topic) + "</b> y generando PDF...");
+  try {
+    const r = await fetch(activeServer + "/api/scribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic, notes, openOnPc: true })
+    });
+    if (r.ok) {
+      const j = await r.json();
+      if (j.success) {
+        if (nInp) nInp.value = "";
+        const dlHref = activeServer + j.downloadUrl;
+        const linkHtml = "<a class='chip' style='margin:0 0 0 6px;text-decoration:none' href='" + dlHref + "' download>⬇ DESCARGAR PDF</a>";
+        if (stBox) {
+          stBox.innerHTML = "✅ Listo: <b>" + escapeHtml(j.fileName) + "</b>" + linkHtml;
+        }
+        appendMsg("jarvis", "🎓 " + escapeHtml(j.summary || "Apuntes sintetizados.") + " " + linkHtml);
+        speakReply("Apuntes de " + topic + " estructurados y generados en PDF en tu TARS AirDrop.", null);
+        refreshLaptopClipboardAndFiles();
+        return;
+      }
+    }
+  } catch (e) {}
+  if (stBox) stBox.innerText = "⚠️ Error generando apuntes PDF.";
+  finishLocalInteraction("No pude sintetizar los apuntes en este momento.");
+}
+
+/* ---------------- CENTINELA DE RED & NOTIFICACIONES ---------------- */
+async function openSentinelModal() {
+  updatePhoneTelemetry();
+  renderRecentNotifications();
+  document.getElementById("sentinelModal").classList.add("open");
+  if (isLaptopOnline) {
+    try {
+      const res = await fetch(activeServer + "/api/sentinel-trap");
+      if (res.ok) {
+        const st = await res.json();
+        sentinelTrapArmed = Boolean(st.armed);
+        updateSentinelButtonUI();
+      }
+    } catch (e) {}
+  }
+  await scanNetwork(true);
+}
+function openNotifSettings() {
+  if (window.ZarateBridge && window.ZarateBridge.openNotificationListenerSettings) {
+    window.ZarateBridge.openNotificationListenerSettings();
+  }
+}
+function renderRecentNotifications() {
+  const list = document.getElementById("recentNotifsList");
+  list.innerHTML = "";
+  let items = [];
+  if (window.ZarateBridge && window.ZarateBridge.getRecentNotificationsJson) {
+    try { items = JSON.parse(window.ZarateBridge.getRecentNotificationsJson()); } catch (e) {}
+  }
+  if (items.length === 0) {
+    list.innerHTML = "<div class='list-item'>Sin notificaciones capturadas todavía. Activa el Lector arriba para anunciar WhatsApp/SMS en tu laptop.</div>";
+    return;
+  }
+  items.forEach(n => {
+    const div = document.createElement("div");
+    div.className = "list-item";
+    div.innerHTML = "<div><b style='color:var(--cyan)'>[" + escapeHtml(n.app) + "] " + escapeHtml(n.sender) + "</b><br/>" + escapeHtml(n.text) + "</div>";
+    list.appendChild(div);
+  });
+}
+window.onNativeNotification = function(jsonStr) {
+  try {
+    const n = JSON.parse(jsonStr);
+    pendingIncomingNotif = n;
+    appendMsg("jarvis", "🔔 <b>[" + escapeHtml(n.app) + "]</b> " + escapeHtml(n.sender) + ": " + escapeHtml(n.text));
+    if (document.getElementById("sentinelModal").classList.contains("open")) {
+      renderRecentNotifications();
+    }
+    syncWithLaptop(false);
+  } catch (e) {}
+};
+
+async function scanNetwork(silent = false) {
+  const list = document.getElementById("lanDevicesList");
+  if (!isLaptopOnline) {
+    list.innerHTML = "<div class='list-item'>Conecta con la laptop para escanear la red local.</div>";
+    return;
+  }
+  try {
+    const r = await fetch(activeServer + "/api/network-scan");
+    if (!r.ok) return;
+    const j = await r.json();
+    list.innerHTML = "";
+    (j.devices || []).forEach(d => {
+      const div = document.createElement("div");
+      div.className = "list-item";
+      const col = d.state === "REACHABLE" || d.state === "ONLINE" ? "var(--green)" : "var(--cyan)";
+      div.innerHTML = "<div><b style='color:" + col + "'>" + escapeHtml(d.ip) + "</b> — " + escapeHtml(d.label) + "<br/><span style='opacity:0.8'>MAC: " + escapeHtml(d.mac) + " (" + escapeHtml(d.state) + ")</span></div>"
+        + "<button class='chip' style='margin:0;flex:none' onclick=\"runCyberOps('nmap','','" + escapeHtml(d.ip) + "')\">🛡️ NMAP</button>";
+      list.appendChild(div);
+    });
+    if (!silent) {
+      finishLocalInteraction("Escaneo Centinela completado: " + (j.count || 0) + " dispositivos detectados en tu red Wi-Fi.");
+    }
+  } catch (e) {}
+}
+
+async function fetchSentinelWebcam() {
+  const wrap = document.getElementById("sentinelWebcamWrap");
+  const img = document.getElementById("sentinelWebcamImg");
+  if (!isLaptopOnline) {
+    finishLocalInteraction("Webcam Centinela requiere conexión con tu laptop.");
+    return;
+  }
+  try {
+    const r = await fetch(activeServer + "/api/live-vision?source=webcam");
+    if (r.ok) {
+      const j = await r.json();
+      if (j.success && j.imageBase64) {
+        img.src = j.imageBase64;
+        wrap.style.display = "block";
+        appendMsg("jarvis", "📷 Captura de Webcam Centinela recibida desde tu laptop.");
+      }
+    }
+  } catch (e) {}
+}
+
+function runCyberShell() {
+  const inp = document.getElementById("cyberCmdInput");
+  const cmd = inp ? inp.value.trim() : "";
+  if (!cmd) return;
+  runCyberOps("shell", cmd, "");
+}
+
+async function runCyberOps(action, command, targetIp) {
+  const out = document.getElementById("cyberOutputBox");
+  if (!isLaptopOnline) {
+    if (out) out.innerText = "Conecta con tu laptop primero para usar Cyber-Ops.";
+    return;
+  }
+  if (out) {
+    out.innerText = action === "nmap"
+      ? ("⏳ Ejecutando Nmap rápido en " + targetIp + "...")
+      : (action === "ports" ? "⏳ Auditando puertos activos (ss -tulnp)..." : ("⏳ $ " + command));
+  }
+  try {
+    const r = await fetch(activeServer + "/api/cyber-ops", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, command, targetIp })
+    });
+    const j = await r.json();
+    if (out) {
+      out.innerText = j.success ? (j.output || "(sin salida)") : ("⚠️ " + (j.error || "Error"));
+    }
+  } catch (e) {
+    if (out) out.innerText = "Error de conexión Cyber-Ops: " + e.message;
+  }
+}
+
+async function activateShieldLock() {
+  if (!isLaptopOnline) return;
+  const r = await fetch(activeServer + "/api/network-scan", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "lock" })
+  });
+  if (r.ok) {
+    closeModals();
+    finishLocalInteraction("Protocolo Escudo ejecutado: tu laptop Garuda Linux ha quedado bloqueada.");
+  }
+}
+
+let proximityRadarEnabled = false;
+async function toggleProximityRadar() {
+  proximityRadarEnabled = !proximityRadarEnabled;
+  updateProximityButtonUI();
+  if (!isLaptopOnline) return;
+  try {
+    const r = await fetch(activeServer + "/api/mobile-sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ proximityGuardian: proximityRadarEnabled })
+    });
+    if (r.ok) {
+      const j = await r.json();
+      proximityRadarEnabled = Boolean(j.proximityGuardian);
+      updateProximityButtonUI();
+      finishLocalInteraction(proximityRadarEnabled ? "🛰️ Radar de Presencia TARS activado: la laptop se bloqueará si te alejas." : "🛰️ Radar de Presencia desactivado.");
+    }
+  } catch (e) {}
+}
+
+function updateProximityButtonUI() {
+  const btn = document.getElementById("btnProximityRadar");
+  if (!btn) return;
+  if (proximityRadarEnabled) {
+    btn.className = "tv-btn ok";
+    btn.innerText = "🛰️ RADAR PRESENCIA: ACTIVO";
+  } else {
+    btn.className = "tv-btn";
+    btn.innerText = "🛰️ RADAR PRESENCIA: OFF";
+  }
+}
+
+let sentinelTrapArmed = false;
+async function toggleSentinelTrap() {
+  sentinelTrapArmed = !sentinelTrapArmed;
+  updateSentinelButtonUI();
+  if (!isLaptopOnline) return;
+  try {
+    const r = await fetch(activeServer + "/api/sentinel-trap", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: sentinelTrapArmed ? "arm" : "disarm" })
+    });
+    if (r.ok) {
+      const j = await r.json();
+      sentinelTrapArmed = Boolean(j.armed);
+      updateSentinelButtonUI();
+      finishLocalInteraction(j.reply || (sentinelTrapArmed ? "Trampa activada." : "Trampa desactivada."));
+    }
+  } catch (e) {}
+}
+
+function updateSentinelButtonUI() {
+  const btn = document.getElementById("btnSentinelTrap");
+  if (!btn) return;
+  if (sentinelTrapArmed) {
+    btn.className = "tv-btn danger";
+    btn.innerText = "🚨 TRAMPA INTRUSO: ARMADA";
+  } else {
+    btn.className = "tv-btn";
+    btn.innerText = "🚨 TRAMPA INTRUSO: OFF";
+  }
+}
+
+async function testSentinelTrap() {
+  if (!isLaptopOnline) return;
+  finishLocalInteraction("Disparando sensor de trampa centinela con captura...");
+  try {
+    const res = await fetch(activeServer + "/api/sentinel-trap", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "test" })
+    });
+    if (res.ok) {
+      const d = await res.json();
+      if (d.imageBase64) {
+        const wImg = document.getElementById("sentinelWebcamImg");
+        const wWrap = document.getElementById("sentinelWebcamWrap");
+        if (wImg && wWrap) {
+          wImg.src = d.imageBase64;
+          wWrap.style.display = "block";
+        }
+      }
+      appendMsg("jarvis", "🚨 " + escapeHtml(d.reply || "Trampa disparada con captura."));
+    }
+  } catch (e) {}
+}
+
+/* ---------------- TARS PROTOCOLS, MEDIA DECK & SMART TV ---------------- */
+function openProtocolsModal() {
+  document.getElementById("protoModal").classList.add("open");
+  refreshMediaDeck();
+}
+
+function updateMediaDeckUI(j) {
+  if (!j) return;
+  const tl = document.getElementById("mediaTrackLabel");
+  const vl = document.getElementById("mediaVolLabel");
+  if (typeof j.volumePct === "number") currentLaptopVol = j.volumePct;
+  if (tl) tl.innerText = (j.status === "Playing" ? "▶ " : (j.status === "Paused" ? "⏸ " : "")) + (j.track || "Sin reproducción activa");
+  if (vl) vl.innerText = j.muted ? "MUTE" : ("VOL " + currentLaptopVol + "%");
+}
+
+async function refreshMediaDeck() {
+  if (!isLaptopOnline) return;
+  try {
+    const r = await fetch(activeServer + "/api/media-deck");
+    if (r.ok) updateMediaDeckUI(await r.json());
+  } catch (e) {}
+}
+
+async function mediaDeckAction(action, value) {
+  if (!isLaptopOnline) return;
+  try {
+    const r = await fetch(activeServer + "/api/media-deck", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, value })
+    });
+    if (r.ok) updateMediaDeckUI(await r.json());
+  } catch (e) {}
+}
+
+function stepLaptopVol(delta) {
+  const nextVol = Math.max(0, Math.min(130, currentLaptopVol + delta));
+  mediaDeckAction("volume", nextVol);
+}
+async function runProtocol(name) {
+  closeModals();
+  if (!isLaptopOnline) {
+    finishLocalInteraction("Protocolo " + name + " requiere conexión con tu laptop.");
+    return;
+  }
+  try {
+    const r = await fetch(activeServer + "/api/protocol", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ protocol: name })
+    });
+    if (r.ok) {
+      const j = await r.json();
+      if (j.phoneAction && window.ZarateBridge) {
+        if (typeof j.phoneAction.volumePct === "number") window.ZarateBridge.setPhoneVolume(j.phoneAction.volumePct);
+        if (typeof j.phoneAction.torch === "boolean") window.ZarateBridge.setTorch(j.phoneAction.torch);
+        if (typeof j.phoneAction.strobe === "number" && window.ZarateBridge.strobeTorch) window.ZarateBridge.strobeTorch(j.phoneAction.strobe);
+        if (j.phoneAction.diag) runDualDiag();
+      }
+      appendMsg("jarvis", "🎬 <b>Protocolo " + escapeHtml(name.toUpperCase()) + ":</b> " + escapeHtml(j.reply));
+      speakReply(j.reply, j.audioUrls || []);
+    }
+  } catch (e) {}
+}
+function tvSearchYt() {
+  const q = document.getElementById("tvYtInput").value.trim();
+  if (!q) return;
+  sendToLaptop("pon " + q + " en la tv");
+  document.getElementById("tvYtInput").value = "";
+}
+function sendToLaptop(cmd) { closeModals(); sendCommand(cmd, false); }
+
+async function tvDpadKey(key) {
+  if (window.ZarateBridge && window.ZarateBridge.vibrate) {
+    window.ZarateBridge.vibrate(35);
+  }
+  if (!isLaptopOnline) return;
+  try {
+    await fetch(activeServer + "/api/remote-input", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target: "tv", action: "dpad", key })
+    });
+  } catch (e) {}
+}
+
+async function sendDirectTvText() {
+  const inp = document.getElementById("tvDirectTextInput");
+  const text = (inp ? inp.value : "").trim();
+  if (!text || !isLaptopOnline) return;
+  if (inp) inp.value = "";
+  try {
+    await fetch(activeServer + "/api/remote-input", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target: "tv", action: "type", text })
+    });
+    finishLocalInteraction("Texto inyectado en Smart TV: " + text);
+  } catch (e) {}
+}
+
+async function teleportMedia(target = "tv") {
+  if (!isLaptopOnline) {
+    finishLocalInteraction("Teleport requiere conexión con tu laptop.");
+    return;
+  }
+  appendMsg("jarvis", "📡 <i>Teleportando reproducción activa hacia " + (target === "tv" ? "Smart TV" : "Laptop") + "...</i>");
+  try {
+    const res = await fetch(activeServer + "/api/teleport", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      appendMsg("jarvis", "📺 " + escapeHtml(data.reply || "Teleport completado."));
+      speakReply(data.reply || "Teleport completado.", null);
+    }
+  } catch (e) {
+    appendMsg("jarvis", "Error al ejecutar teleport multimedia.");
+  }
+}
+
+/* ---------------- HOLOGRAPHIC TRACKPAD & LIVE DESKTOP ---------------- */
+
+function openModulesDrawer() {
+  const d = document.getElementById("modulesDrawer");
+  if (d) d.classList.add("open");
+}
+function closeModulesDrawer() {
+  const d = document.getElementById("modulesDrawer");
+  if (d) d.classList.remove("open");
+}
+
+function openTrackpadModal(initialMode = "touch") {
+  document.getElementById("trackpadModal").classList.add("open");
+  setTrackpadMode(initialMode || "touch");
+}
+
+function stopLiveScreenStream() {
+  if (liveVisionTimer) {
+    clearTimeout(liveVisionTimer);
+    liveVisionTimer = null;
+  }
+}
+
+function setTrackpadMode(mode) {
+  trackpadMode = mode || "touch";
+  stopLiveScreenStream();
+  const tpWrap = document.getElementById("trackpadArea");
+  const liveWrap = document.getElementById("liveScreenWrap");
+  const bT = document.getElementById("tpBtnTouch");
+  const bS = document.getElementById("tpBtnScreen");
+  const bTv = document.getElementById("tpBtnTv");
+  const bW = document.getElementById("tpBtnWebcam");
+  if (bT) bT.className = "tv-btn" + (trackpadMode === "touch" ? " ok" : "");
+  if (bS) bS.className = "tv-btn" + (trackpadMode === "screen" ? " ok" : "");
+  if (bTv) bTv.className = "tv-btn" + (trackpadMode === "tv" ? " ok" : "");
+  if (bW) bW.className = "tv-btn" + (trackpadMode === "webcam" ? " ok" : "");
+
+  if (trackpadMode === "touch") {
+    if (tpWrap) tpWrap.style.display = "flex";
+    if (liveWrap) liveWrap.style.display = "none";
+  } else {
+    if (tpWrap) tpWrap.style.display = "none";
+    if (liveWrap) liveWrap.style.display = "block";
+    pollLiveVisionLoop();
+  }
+}
+
+let isFetchingVision = false;
+async function fetchLiveVisionFrame() {
+  if (!isLaptopOnline || trackpadMode === "touch" || isFetchingVision) return;
+  isFetchingVision = true;
+  try {
+    const src = trackpadMode === "tv" ? "tv" : (trackpadMode === "webcam" ? "webcam" : "screen");
+    const r = await fetch(activeServer + "/api/live-vision?source=" + src, { signal: AbortSignal.timeout(2800) });
+    if (r.ok) {
+      const j = await r.json();
+      if (j.success && j.imageBase64) {
+        document.getElementById("liveScreenImg").src = j.imageBase64;
+      }
+    }
+  } catch (e) {}
+  finally {
+    isFetchingVision = false;
+  }
+}
+
+async function pollLiveVisionLoop() {
+  if (trackpadMode === "touch") return;
+  const modal = document.getElementById("trackpadModal");
+  if (!modal || !modal.classList.contains("open")) return;
+  await fetchLiveVisionFrame();
+  if (trackpadMode !== "touch" && modal.classList.contains("open")) {
+    const delay = trackpadMode === "screen" ? 180 : (trackpadMode === "tv" ? 450 : 250);
+    liveVisionTimer = setTimeout(pollLiveVisionLoop, delay);
+  }
+}
+
+async function onLiveScreenTap(e) {
+  if ((trackpadMode !== "screen" && trackpadMode !== "tv") || !isLaptopOnline) return;
+  const img = document.getElementById("liveScreenImg");
+  const rect = img.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+
+  const clientX = (e.touches && e.touches[0]) ? e.touches[0].clientX : ((e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : e.clientX);
+  const clientY = (e.touches && e.touches[0]) ? e.touches[0].clientY : ((e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientY : e.clientY);
+
+  const xNorm = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+  const yNorm = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
+
+  if (window.ZarateBridge && window.ZarateBridge.vibrate) window.ZarateBridge.vibrate(25);
+
+  try {
+    await fetch(activeServer + "/api/live-vision", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target: trackpadMode === "tv" ? "tv" : "screen", xNorm, yNorm, button: "left" })
+    });
+    setTimeout(fetchLiveVisionFrame, 160);
+  } catch (err) {}
+}
+
+let lastTouchX = null, lastTouchY = null, startTouchX = null, startTouchY = null;
+let touchMoved = false, accDx = 0, accDy = 0, moveTimer = null;
+let twoFingerStartY = null;
+
+let inFlightMove = false;
+let pendingMovePayload = null;
+
+async function flushRemoteMove() {
+  if (inFlightMove || !pendingMovePayload || !isLaptopOnline) return;
+  const payload = pendingMovePayload;
+  pendingMovePayload = null;
+  inFlightMove = true;
+  try {
+    await fetch(activeServer + "/api/remote-input", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+  } catch (e) {}
+  inFlightMove = false;
+  if (pendingMovePayload) flushRemoteMove();
+}
+
+function queueRemoteMove(dx, dy) {
+  if (pendingMovePayload) {
+    pendingMovePayload.dx += dx;
+    pendingMovePayload.dy += dy;
+  } else {
+    pendingMovePayload = { action: "move", dx, dy };
+  }
+  flushRemoteMove();
+}
+
+let rafMovePending = false;
+function scheduleSendMove() {
+  if (rafMovePending) return;
+  rafMovePending = true;
+  requestAnimationFrame(() => {
+    rafMovePending = false;
+    if (Math.abs(accDx) < 0.5 && Math.abs(accDy) < 0.5) return;
+    const sendDx = Math.round(accDx);
+    const sendDy = Math.round(accDy);
+    accDx -= sendDx;
+    accDy -= sendDy;
+
+    if (window.ZarateBridge && window.ZarateBridge.sendRemoteMove) {
+      window.ZarateBridge.sendRemoteMove(sendDx, sendDy);
+    } else {
+      try {
+        fetch(activeServer + "/api/remote-input", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "move", dx: sendDx, dy: sendDy }),
+          keepalive: true
+        });
+      } catch (e) {}
+    }
+  });
+}
+
+const tp = document.getElementById("trackpadArea");
+tp.addEventListener("touchstart", e => {
+  e.preventDefault();
+  if (e.touches.length === 1) {
+    lastTouchX = e.touches[0].clientX;
+    lastTouchY = e.touches[0].clientY;
+    startTouchX = lastTouchX;
+    startTouchY = lastTouchY;
+    touchMoved = false;
+    accDx = 0; accDy = 0;
+    try {
+      fetch(activeServer + "/api/remote-input", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "touch_start" }),
+        keepalive: true
+      });
+    } catch (e) {}
+  } else if (e.touches.length === 2) {
+    twoFingerStartY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    touchMoved = true;
+  }
+}, { passive: false });
+
+tp.addEventListener("touchmove", e => {
+  e.preventDefault();
+  if (e.touches.length === 1 && lastTouchX !== null) {
+    const nx = e.touches[0].clientX;
+    const ny = e.touches[0].clientY;
+    const distFromStart = Math.hypot(nx - startTouchX, ny - startTouchY);
+    if (distFromStart > 4) touchMoved = true;
+
+    const dx = (nx - lastTouchX) * 1.6;
+    const dy = (ny - lastTouchY) * 1.6;
+    lastTouchX = nx;
+    lastTouchY = ny;
+
+    accDx += dx;
+    accDy += dy;
+    scheduleSendMove();
+  } else if (e.touches.length === 2 && twoFingerStartY !== null) {
+    const curY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    const deltaY = curY - twoFingerStartY;
+    if (Math.abs(deltaY) > 14) {
+      remoteInput({ action: "scroll", dy: deltaY < 0 ? 1 : -1 });
+      twoFingerStartY = curY;
+    }
+  }
+}, { passive: false });
+
+tp.addEventListener("touchend", e => {
+  e.preventDefault();
+  if (e.touches.length === 0) {
+    if (!touchMoved) {
+      if (window.ZarateBridge && window.ZarateBridge.vibrate) window.ZarateBridge.vibrate(25);
+      remoteInput({ action: "click" });
+    }
+    lastTouchX = null; lastTouchY = null;
+    startTouchX = null; startTouchY = null;
+    twoFingerStartY = null;
+  }
+}, { passive: false });
+
+async function remoteInput(payload) {
+  if (!isLaptopOnline) return;
+  const body = { ...payload };
+  if (trackpadMode === "tv" && !body.target) {
+    body.target = "tv";
+    if (body.action === "key") {
+      if (body.key === "Return") body.key = "select";
+      if (body.key === "Escape") body.key = "back";
+    }
+    if (body.action === "scroll") {
+      body.action = "dpad";
+      body.key = body.dy > 0 ? "down" : "up";
+    }
+  }
+  if (body.action === "click" || body.action === "rclick") {
+    if (window.ZarateBridge && window.ZarateBridge.vibrate) window.ZarateBridge.vibrate(25);
+  }
+  try {
+    await fetch(activeServer + "/api/remote-input", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+  } catch (e) {}
+}
+
+function sendRemoteText() {
+  const inp = document.getElementById("remoteTypeInput");
+  const txt = (inp ? inp.value : "").trim();
+  if (!txt) return;
+  if (inp) inp.value = "";
+  remoteInput({ action: "type", text: txt });
+}
+
+/* ---------------- CORE CONTROLS & MEMORY ---------------- */
+function toggleTorchBtn() {
+  torchState = !torchState;
+  if (window.ZarateBridge) window.ZarateBridge.setTorch(torchState);
+  document.getElementById("btnTorch").className = "tac-btn" + (torchState ? " active" : "");
+  const msg = torchState ? "Linterna táctica del Tecno Spark 30 activada." : "Linterna desactivada.";
+  appendMsg("jarvis", msg);
+  speakReply(msg, null);
+}
+function openTermuxBtn() { if (window.ZarateBridge) appendMsg("jarvis", window.ZarateBridge.openApp("termux")); }
+
+/* ---------------- CYBER-ROOT TARS ENGINE ---------------- */
+function rootCpuTurbo() {
+  if (window.ZarateBridge && window.ZarateBridge.setCpuGovernor) {
+    const res = window.ZarateBridge.setCpuGovernor("performance");
+    appendMsg("jarvis", "⚡ <b>MODO TURBO KERNEL ACTIVADO:</b> " + escapeHtml(res));
+    speakReply("Modo turbo activado a nivel de kernel. Procesador al cien por ciento.", null);
+  } else {
+    appendMsg("jarvis", "Permisos root requeridos.");
+  }
+}
+function rootCpuPowersave() {
+  if (window.ZarateBridge && window.ZarateBridge.setCpuGovernor) {
+    const res = window.ZarateBridge.setCpuGovernor("powersave");
+    appendMsg("jarvis", "❄️ <b>MODO FRÍO / ECO ACTIVADO:</b> " + escapeHtml(res));
+    speakReply("Modo ecológico activo. Frecuencias del procesador reducidas para máxima batería.", null);
+  }
+}
+function rootDropRam() {
+  if (window.ZarateBridge && window.ZarateBridge.dropRamCaches) {
+    const res = window.ZarateBridge.dropRamCaches();
+    appendMsg("jarvis", "🚀 <b>PURGA DE MEMORIA:</b> " + escapeHtml(res));
+    speakReply("Memoria RAM purificada a nivel de kernel.", null);
+    updatePhoneTelemetry();
+  }
+}
+function rootBypassBattery(enable) {
+  if (window.ZarateBridge && window.ZarateBridge.setBatteryChargingEnabled) {
+    const res = window.ZarateBridge.setBatteryChargingEnabled(enable);
+    appendMsg("jarvis", "🔋 <b>CONTROL DE CARGA:</b> " + escapeHtml(res));
+    speakReply(enable ? "Carga normal de batería reanudada." : "Modo batería eterna activado. Alimentación por cable sin degradación.", null);
+    updatePhoneTelemetry();
+  }
+}
+function rootSilentScreenshot() {
+  if (window.ZarateBridge && window.ZarateBridge.rootTakeScreenshot) {
+    const res = window.ZarateBridge.rootTakeScreenshot();
+    appendMsg("jarvis", "📸 <b>CAPTURA SILENCIOSA ROOT:</b> " + escapeHtml(res));
+    speakReply("Captura de pantalla silenciosa guardada.", null);
+  }
+}
+function openMemoryModal() {
+  updateMemoryUI();
+  refreshNetworkModalInfo();
+  document.getElementById("memModal").classList.add("open");
+}
+function refreshNetworkModalInfo() {
+  let phoneTs = "";
+  if (window.ZarateBridge && window.ZarateBridge.getPhoneTailscaleIp) {
+    try { phoneTs = window.ZarateBridge.getPhoneTailscaleIp(); } catch (e) {}
+  }
+  const ptsEl = document.getElementById("phoneTsIp");
+  if (ptsEl) ptsEl.innerText = phoneTs ? phoneTs : "Desconectada";
+  const ltsEl = document.getElementById("laptopTsUrl");
+  if (ltsEl) ltsEl.innerText = savedTailscaleUrl ? savedTailscaleUrl : "No iniciada en laptop";
+  const clEl = document.getElementById("cloudTunnelUrl");
+  if (clEl) clEl.innerText = savedCloudUrl ? savedCloudUrl : "Sin túnel activo";
+}
+function openTailscaleApp() {
+  if (window.ZarateBridge && window.ZarateBridge.openTailscale) {
+    const r = window.ZarateBridge.openTailscale();
+    appendMsg("jarvis", escapeHtml(r));
+  }
+}
+function connectPresetUrl(url) {
+  if (!url) return;
+  document.getElementById("serverUrlInput").value = url;
+  saveServerUrl();
+}
+function useDiscoveredTailscale() {
+  if (!savedTailscaleUrl) {
+    appendMsg("jarvis", "Activa Tailscale en tu laptop y teléfono para obtener la IP 100.x automáticamente.");
+    return;
+  }
+  connectPresetUrl(savedTailscaleUrl);
+}
+function useDiscoveredCloud() {
+  if (!savedCloudUrl) {
+    appendMsg("jarvis", "Aún no hay túnel global HTTPS reportado por tu laptop.");
+    return;
+  }
+  connectPresetUrl(savedCloudUrl);
+}
+function closeModals() { stopCameraStream(); stopLiveScreenStream(); document.querySelectorAll(".modal").forEach(m => m.classList.remove("open")); }
+function saveServerUrl() {
+  const p = sanitizeServerUrl(document.getElementById("serverUrlInput").value);
+  const l = sanitizeServerUrl((document.getElementById("lanUrlInput") || {}).value);
+  const t = ((document.getElementById("tokenInput") || {}).value || "").trim();
+  if (!p && !l) { setConnStatus("⚠️ Escribe al menos una URL de servidor.", false); return; }
+  if (p && !/^https:\/\//i.test(p) && !/^http:\/\/(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|127\.|100\.)/i.test(p)) {
+    setConnStatus("⚠️ El servidor de internet debe usar https:// (tu token viaja en cada petición).", false);
+    return;
+  }
+  primaryServer = p; lanServer = l;
+  localStorage.setItem(LS_PRIMARY, p);
+  localStorage.setItem(LS_LAN, l);
+  if (t) window.setStarkToken(t);
+  setActiveServer(p || l);
+  lastServerPick = 0;
+  setConnStatus("⏳ Probando conexión...", null);
+  syncWithLaptop(true);
+}
+function runDualDiag() {
+  const t = updatePhoneTelemetry();
+  const pcCpu = document.getElementById("pcCpu").innerText;
+  const pcRam = document.getElementById("pcRam").innerText;
+  const msg = "Diagnóstico dual: Spark 30 al " + t.battery + "% de batería, " + t.tempC + " grados, " + (t.ramFreeMb / 1024).toFixed(1) + " GB libres. "
+    + (isLaptopOnline ? ("Laptop en línea (" + lastLatencyMs + "ms) con " + pcCpu + " y RAM al " + pcRam + ".") : "Modo autónomo móvil activo.");
+  appendMsg("jarvis", msg);
+  speakReply(msg, null);
+}
+
+/* ---------------- VOICE ---------------- */
+function setVoiceBar(mode, text) {
+  const bar = document.getElementById("liveVoiceBar");
+  if (!bar) return;
+  bar.className = "voice-transcript-bar" + (mode ? (" " + mode) : "");
+  bar.innerText = text;
+}
+function updateWakePillUI(active) {
+  handsFreeActive = Boolean(active);
+  const pill = document.getElementById("wakePill");
+  if (!pill) return;
+  pill.innerText = handsFreeActive ? "🎙️ OYE TARS: ON" : "🎙️ OYE TARS: OFF";
+  pill.style.borderColor = handsFreeActive ? "var(--green)" : "rgba(0, 240, 255, 0.45)";
+  pill.style.background = handsFreeActive ? "rgba(0, 255, 170, 0.24)" : "rgba(0, 150, 255, 0.14)";
+  pill.style.color = handsFreeActive ? "var(--green)" : "var(--ice)";
+}
+function toggleHandsFree() {
+  if (!window.ZarateBridge || !window.ZarateBridge.setHandsFreeWakeWord) {
+    appendMsg("jarvis", "El modo manos libres requiere la app nativa Android.");
+    return;
+  }
+  const nextState = window.ZarateBridge.setHandsFreeWakeWord(!handsFreeActive);
+  updateWakePillUI(nextState);
+  if (nextState) {
+    setVoiceBar("listening", "👂 MODO MANOS LIBRES ACTIVO: Di 'Oye TARS...' en cualquier momento.");
+  } else {
+    setVoiceBar("", "🗣️ VOZ EN TEXTO: Toca el Reactor para hablar...");
+  }
+}
+window.onNativeWakeState = function(st) { updateWakePillUI(st); };
+window.onNativeWakeHeard = function(txt) {
+  const clean = String(txt || "").trim();
+  if (!clean) return;
+  setVoiceBar("recognized", "👂 MODO MANOS LIBRES ESCUCHÓ: \"" + clean + "\"");
+};
+let browserSpeechRec = null;
+function triggerVoice() {
+  if (window.ZarateBridge && window.ZarateBridge.startVoiceListening) {
+    window.ZarateBridge.startVoiceListening();
+    return;
+  }
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SpeechRec) {
+    if (browserSpeechRec) {
+      try { browserSpeechRec.stop(); } catch (e) {}
+      browserSpeechRec = null;
+      return;
+    }
+    try {
+      browserSpeechRec = new SpeechRec();
+      browserSpeechRec.lang = "es-PE";
+      browserSpeechRec.continuous = false;
+      browserSpeechRec.interimResults = true;
+      setVoiceBar("listening", "🎙️ ESCUCHANDO TU VOZ...");
+      document.getElementById("statusLabel").innerText = "🎙️ ESCUCHANDO...";
+      browserSpeechRec.onresult = (ev) => {
+        let transcript = "";
+        for (let i = ev.resultIndex; i < ev.results.length; ++i) {
+          transcript += ev.results[i][0].transcript;
+        }
+        document.getElementById("cmdInput").value = transcript;
+        setVoiceBar("recognized", "🗣️ DIJISTE: \"" + transcript + "\"");
+        if (ev.results[0] && ev.results[0].isFinal) {
+          browserSpeechRec = null;
+          sendCommand(transcript);
+        }
+      };
+      browserSpeechRec.onerror = () => {
+        browserSpeechRec = null;
+        setVoiceBar("error", "⚠️ Micrófono detenido.");
+        document.getElementById("statusLabel").innerText = "TOCA EL REACTOR PARA HABLAR";
+      };
+      browserSpeechRec.onend = () => {
+        browserSpeechRec = null;
+        document.getElementById("statusLabel").innerText = "TOCA EL REACTOR PARA HABLAR";
+      };
+      browserSpeechRec.start();
+      return;
+    } catch (e) {}
+  }
+  document.getElementById("cmdInput").focus();
+}
+window.onNativeMicState = function(st) {
+  micState = st;
+  if (st === "LISTENING") {
+    document.getElementById("statusLabel").innerText = "🎙️ ESCUCHANDO... (TOCA PARA ENVIAR)";
+    setVoiceBar("listening", "🎙️ ESCUCHANDO EN VIVO... (toca el Reactor al terminar o haz una pausa)");
+  } else if (st === "PROCESSING") {
+    document.getElementById("statusLabel").innerText = "⚡ TRANSCRIBIENDO VOZ...";
+    setVoiceBar("recognized", "⚡ TRANSCRIBIENDO VOZ...");
+  } else if (st === "IDLE") {
+    document.getElementById("statusLabel").innerText = "TOCA EL REACTOR PARA HABLAR";
+    micRms = 0;
+  }
+};
+window.onNativeMicRms = function(rms) { micRms = Math.max(0, Math.min(12, rms)); };
+window.onNativeSpeechError = function(msg) {
+  micState = "IDLE";
+  micRms = 0;
+  document.getElementById("statusLabel").innerText = "TOCA EL REACTOR PARA HABLAR";
+  setVoiceBar("error", "⚠️ " + (msg || "No se detectó voz clara."));
+};
+window.onNativeSpeechResult = function(text, isFinal) {
+  const clean = String(text || "").trim();
+  if (!clean) return;
+  document.getElementById("cmdInput").value = clean;
+  setVoiceBar("recognized", "🗣️ DIJISTE: \"" + clean + "\"");
+  if (isFinal) {
+    micState = "IDLE";
+    micRms = 0;
+    document.getElementById("statusLabel").innerText = "TOCA EL REACTOR PARA HABLAR";
+    setTimeout(() => {
+      setVoiceBar("recognized", "🗣️ ÚLTIMO COMANDO DE VOZ: \"" + clean + "\"");
+      sendCommand(clean);
+    }, 350);
+  }
+};
+
+function speakReply(text, audioUrls) {
+  const cleanText = String(text || "").replace(/<[^>]*>/g, "");
+  if (Array.isArray(audioUrls) && audioUrls.length > 0 && activeServer) {
+    micState = "SPEAKING";
+    document.getElementById("statusLabel").innerText = "🔊 TARS HABLANDO (NEURAL TTS)...";
+    let idx = 0;
+    const playNext = () => {
+      if (idx >= audioUrls.length) {
+        micState = "IDLE";
+        document.getElementById("statusLabel").innerText = "TOCA EL REACTOR PARA HABLAR";
+        return;
+      }
+      const rawUrl = audioUrls[idx++];
+      let url = rawUrl.startsWith("http") ? rawUrl : (activeServer + rawUrl);
+      if (window.getStarkToken() && url.indexOf("/api/") !== -1) url += (url.indexOf("?") === -1 ? "?" : "&") + "token=" + encodeURIComponent(window.getStarkToken());
+      if (currentAudio) { try { currentAudio.pause(); } catch (e) {} }
+      currentAudio = new Audio(url);
+      currentAudio.onended = playNext;
+      let fellBack = false;
+      const fallback = () => {
+        if (fellBack) return; fellBack = true;
+        if (window.ZarateBridge) window.ZarateBridge.speakOffline(cleanText);
+        micState = "IDLE";
+        document.getElementById("statusLabel").innerText = "TOCA EL REACTOR PARA HABLAR";
+      };
+      currentAudio.onerror = fallback;
+      currentAudio.play().catch(fallback);
+    };
+    playNext();
+  } else if (window.ZarateBridge && window.ZarateBridge.speakOffline) {
+    window.ZarateBridge.speakOffline(cleanText);
+  }
+}
+
+/* ---------------- NLP PARSERS ---------------- */
+function parseReminderCommand(text) {
+  const lower = text.toLowerCase();
+  if (!/\b(recu[eé]rdame|recordatorio|av[ií]same|alarma)\b/.test(lower)) return null;
+
+  let timeMs = Date.now() + 5 * 60000;
+  let body = text.replace(/^(?:oye|hey|hola)?\s*(?:(?:j\.?e?\.?a?\.?r\.?v\.?i\.?s|t\.?a\.?r\.?s)[,\s]*)?/i, "").trim();
+
+  const relMatch = lower.match(/\ben\s+(\d+|un|una)\s+(segundo|segundos|minuto|minutos|min|hora|horas|hr)\b/i);
+  const atMatch = lower.match(/\ba\s+las\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm|de\s+la\s+ma[ñn]ana|de\s+la\s+tarde|de\s+la\s+noche)?\b/i);
+
+  if (relMatch) {
+    const num = (relMatch[1] === "un" || relMatch[1] === "una") ? 1 : parseInt(relMatch[1], 10);
+    const unit = relMatch[2];
+    let mult = 60000;
+    if (/segundo/.test(unit)) mult = 1000;
+    else if (/hora|hr/.test(unit)) mult = 3600000;
+    timeMs = Date.now() + num * mult;
+    body = body.replace(relMatch[0], "");
+  } else if (atMatch) {
+    let hh = parseInt(atMatch[1], 10);
+    const mm = atMatch[2] ? parseInt(atMatch[2], 10) : 0;
+    const ap = (atMatch[3] || "").toLowerCase();
+    if ((ap.includes("pm") || ap.includes("tarde") || ap.includes("noche")) && hh < 12) hh += 12;
+    const target = new Date();
+    target.setHours(hh, mm, 0, 0);
+    if (target.getTime() <= Date.now()) target.setDate(target.getDate() + 1);
+    timeMs = target.getTime();
+    body = body.replace(atMatch[0], "");
+  }
+
+  body = body
+    .replace(/\b(recu[eé]rdame|pon\s+un\s+recordatorio|crea\s+un\s+recordatorio|agrega\s+un\s+recordatorio|av[ií]same|de|que)\b/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!body) body = "Recordatorio importante";
+  return { timeMs, text: body };
+}
+
+function parseWhatsAppCommand(text) {
+  const m = text.match(/(?:manda|env[ií]a|escribe|mandar|enviar)(?:le)?\s+(?:un\s+)?(?:mensaje\s+(?:de\s+|por\s+)?)?(?:whatsapp|wasap|wsp|guasap)\s+(?:a|para)\s+([^,]+?)\s+(?:diciendo|que\s+diga|con\s+el\s+mensaje|texto)\s+(.+)$/i);
+  if (m) return { target: m[1].trim(), message: m[2].trim() };
+  const m2 = text.match(/(?:whatsapp|wasap|wsp|guasap)\s+(?:a|para)\s+(\S+)\s+(.+)$/i);
+  if (m2) return { target: m2[1].trim(), message: m2[2].trim() };
+  const m3 = text.match(/(?:manda|env[ií]a|abre)\s+(?:un\s+)?(?:whatsapp|wasap|wsp)\s+(?:a|para)\s+(.+)$/i);
+  if (m3) return { target: m3[1].trim(), message: "" };
+  return null;
+}
+
+/* ---------------- COMMAND DISPATCHER ---------------- */
+async function sendCommand(forcedText, fromSync = false) {
+  const input = document.getElementById("cmdInput");
+  const text = (forcedText || input.value || "").trim();
+  if (!text) return;
+  // Limpia la caja también cuando la orden vino por voz (antes el texto se quedaba ahí)
+  if (!forcedText || input.value.trim() === text) input.value = "";
+  if (!fromSync) input.blur(); // oculta el teclado para ver la respuesta
+  if (!fromSync) appendMsg("user", escapeHtml(text));
+  lastUserText = text;
+  memoryStore.conversationHistory = memoryStore.conversationHistory || [];
+
+  const lower = text.toLowerCase();
+
+  // 0. Root Kernel Hardware Overclock & Battery Bypass
+  if (/\b(modo\s+turbo\s+(en\s+el\s+)?(celular|tel[eé]fono|spark)|overclock|turbo\s+kernel)\b/i.test(lower)) {
+    rootCpuTurbo();
+    return;
+  }
+  if (/\b(bater[ií]a\s+eterna|corta(r)?\s+(la\s+)?carga|bypass\s+bater[ií]a)\b/i.test(lower)) {
+    rootBypassBattery(false);
+    return;
+  }
+  if (/\b(limpia(r)?|purga(r)?)\s+(la\s+)?(ram|memoria)\s+(del\s+)?(celular|tel[eé]fono|spark)\b/i.test(lower)) {
+    rootDropRam();
+    return;
+  }
+  if (/\b(modo\s+(fr[ií]o|eco|ahorro)\s+(en\s+el\s+)?(celular|tel[eé]fono|spark))\b/i.test(lower)) {
+    rootCpuPowersave();
+    return;
+  }
+  if (/\b(captura\s+silenciosa|screenshot\s+root)\b/i.test(lower)) {
+    rootSilentScreenshot();
+    return;
+  }
+
+  // 1. Protocols & Shield Lock (Multi-device)
+  const protoM = lower.match(/\b(?:activa|ejecuta|inicia|pon)?\s*(?:protocolo|modo)\s+(estudio|tesis|cine|fiesta|escudo|turbo|buenos\s*d[ií]as)\b/i);
+  if (protoM) {
+    await runProtocol(protoM[1]);
+    return;
+  }
+  if (/\b(bloquea|asegura)\s+(mi\s+)?(laptop|pc|computadora|sesi[oó]n)\b/i.test(lower)) {
+    await activateShieldLock();
+    return;
+  }
+  if (/\b(radar|guardi[aá]n)\s+(de\s+)?presencia\b/i.test(lower)) {
+    await toggleProximityRadar();
+    return;
+  }
+  if (/\b(trampa\s+centinela|centinela\s+antirrobo|alarma\s+antirrobo)\b/i.test(lower)) {
+    await toggleSentinelTrap();
+    return;
+  }
+  if (/\b(teleport|teletransporta|pasa|env[ií]a|proyecta)\b.*\b(tv|tele|televisor)\b/i.test(lower) && /\b(m[uú]sica|video|canci[oó]n|reproducci[oó]n|esto|pantalla)\b/i.test(lower)) {
+    await teleportMedia("tv");
+    return;
+  }
+
+  // 2. Network Scan
+  if (/\b(escanea|escanear|revisa|quien|qui[eé]n|intrusos)\b.*\b(red|wifi|wi-fi|dispositivos)\b/i.test(lower)) {
+    await openSentinelModal();
+    await scanNetwork(false);
+    return;
+  }
+
+  // 3. Clipboard Transfer
+  if (/\b(pasa|env[ií]a|copia|manda)\b.*\b(portapapeles|clipboard)\b/i.test(lower)) {
+    await pushClipboardToLaptop();
+    return;
+  }
+
+  // 4. Document & PDF Autopilot
+  const pdfM = text.match(/(?:crea|genera|haz|redacta|elabora)\s+(?:un\s+)?(?:informe\s+(?:en\s+)?)?pdf\s+(?:sobre|acerca\s+de|de)\s+(.+)$/i);
+  if (pdfM && pdfM[1]) {
+    await generateStarkPdf(pdfM[1].trim());
+    return;
+  }
+
+  // 5. Live Desktop Mirror & Sentinel Webcam Voice Triggers
+  if (/\b(mu[eé]strame|abre|ver|ense[ñn]a)\b.*\b(pantalla|escritorio)\b.*\b(laptop|pc)\b/i.test(lower) || /\bescritorio\s+remoto\b/i.test(lower)) {
+    openTrackpadModal("screen");
+    finishLocalInteraction("Activando espejo interactivo de tu laptop en vivo.");
+    return;
+  }
+  if (/\b(mu[eé]strame|abre|ver|captura|toma)\b.*\b(webcam|c[aá]mara)\b.*\b(laptop|pc|centinela)\b/i.test(lower) || /\bc[aá]mara\s+centinela\b/i.test(lower)) {
+    await openSentinelModal();
+    await fetchSentinelWebcam();
+    return;
+  }
+
+  // 6. TARS Vision IA (OCR + DeepSeek)
+  if (/\b(analiza|qu[eé]\s+estoy\s+viendo|lee\s+esto|resuelve\s+esto|escanea\s+esto)\b/i.test(lower) || /\b(c[aá]mara)\b.*\b(analiza|lee|resuelve)\b/i.test(lower)) {
+    document.getElementById("camPromptInput").value = text;
+    appendMsg("jarvis", "Activando Visor Óptico IA. Enfoca el objetivo...");
+    speakReply("Activando visor óptico inteligente.", null);
+    openCameraModal("environment", true, true);
+    return;
+  }
+
+  const targetsLaptopOrTv = /\b(laptop|pc|computadora|escritorio|tv|televisor|tele|televisi[oó]n)\b/i.test(lower);
+  if (!targetsLaptopOrTv && window.ZarateBridge) {
+    const rem = parseReminderCommand(text);
+    if (rem) { scheduleReminderMs(rem.timeMs, rem.text); return; }
+
+    const wa = parseWhatsAppCommand(text);
+    if (wa) { finishLocalInteraction(window.ZarateBridge.sendWhatsApp(wa.target, wa.message, true)); return; }
+
+    const callM = text.match(/\b(?:llama|llamar|ll[aá]male|marca|marcar)(?:\s+a|\s+al)?\s+(.+)$/i);
+    if (callM && !/\b(tv|laptop|pc)\b/i.test(callM[1])) {
+      finishLocalInteraction(window.ZarateBridge.callContact(callM[1].trim()));
+      return;
+    }
+
+    if (/\b(t[oó]mame|toma|s[aá]came|saca|haz|captura)\b.*\b(foto|selfie|fotograf[ií]a)\b/i.test(lower)) {
+      const isSelfie = /\b(selfie|frontal)\b/i.test(lower);
+      appendMsg("jarvis", "Activando Visor Óptico TARS (" + (isSelfie ? "Frontal" : "Trasera") + ").");
+      speakReply("Activando cámara TARS. Sonríe.", null);
+      openCameraModal(isSelfie ? "user" : "environment", true, false);
+      return;
+    }
+
+    if (/\b(linterna|flash|luz)\b/i.test(lower)) {
+      const turnOff = /\b(apaga|apagar|desactiva|quita)\b/i.test(lower);
+      torchState = !turnOff;
+      window.ZarateBridge.setTorch(torchState);
+      document.getElementById("btnTorch").className = "tac-btn" + (torchState ? " active" : "");
+      finishLocalInteraction(torchState ? "¡A la orden! Linterna del Spark 30 encendida." : "Linterna del teléfono apagada.");
+      return;
+    }
+
+    if (/\b(volumen)\b.*\b(celular|tel[eé]fono|m[oó]vil)\b/i.test(lower) || (!isLaptopOnline && /\b(sube|baja|pon).*volumen\b/i.test(lower))) {
+      const numMatch = lower.match(/(\d{1,3})/);
+      const targetVol = numMatch ? parseInt(numMatch[1], 10) : (/\bbaja/i.test(lower) ? 35 : 85);
+      const finalV = window.ZarateBridge.setPhoneVolume(targetVol);
+      finishLocalInteraction("Volumen Dolby Atmos ajustado al " + finalV + " por ciento.");
+      return;
+    }
+
+    const appOpenMatch = lower.match(/\b(?:abre|abrir|inicia|lanza)\s+(whatsapp|termux|terminal|arch|c[aá]mara|camara|ajustes|configuraci[oó]n|calculadora|reloj)\b/i);
+    if (appOpenMatch) { finishLocalInteraction(window.ZarateBridge.openApp(appOpenMatch[1])); return; }
+  }
+
+  if (fromSync) return;
+
+  // Núcleo TARS (VPS o laptop). Antes: timeout de 1.8 s (la IA tarda más), se
+  // reintentaba la MISMA orden en otros servidores y una función inexistente (updateStatus)
+  // hacía descartar cada respuesta correcta.
+  document.getElementById("statusLabel").innerText = "⚡ EJECUTANDO EN NÚCLEO TARS..";
+  if (commandInFlight) {
+    appendMsg("jarvis", "Un momento, todavía estoy procesando la orden anterior.");
+    return;
+  }
+  const srv = await pickServer(false);
+  if (!srv) {
+    finishLocalInteraction("Sin conexión con el servidor ahora mismo. Esa orden necesita a TARS en la nube; vuelve a intentarlo cuando tengas internet.");
+    return;
+  }
+  commandInFlight = true;
+  try {
+    const res = await fetch(srv + "/api/command", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, voiceOutput: true, personaMode: "jarvis", origin: "mobile" }),
+      signal: AbortSignal.timeout(90000)
+    });
+    if (res.status === 401) {
+      finishLocalInteraction("El servidor rechazó el token de acceso. Revísalo en RED.", false);
+      return;
+    }
+    let data = {};
+    try { data = await res.json(); } catch (e) {}
+    if (!res.ok || data.success === false) {
+      finishLocalInteraction("El servidor respondió con un error (" + res.status + "): " + (data.error || "sin detalle") + ".", false);
+      return;
+    }
+    isLaptopOnline = true;
+    const reply = String(data.reply || "Orden ejecutada.");
+    appendMsg("jarvis", formatReply(reply));
+    if (data.memoryStore) {
+      memoryStore = data.memoryStore;
+      localStorage.setItem("zarate_memory_store", JSON.stringify(memoryStore));
+      updateMemoryUI();
+    }
+    speakReply(reply, data.audioUrls || (data.audioUrl ? [data.audioUrl] : []));
+    if (micState !== "SPEAKING") document.getElementById("statusLabel").innerText = "TOCA EL REACTOR PARA HABLAR";
+  } catch (e) {
+    lastServerPick = 0;
+    const timedOut = e && (e.name === "TimeoutError" || e.name === "AbortError");
+    finishLocalInteraction(timedOut
+      ? "El servidor tardó demasiado en responder. Puede que la orden se haya ejecutado igualmente; revisa antes de repetirla."
+      : "Se perdió la conexión con el servidor mientras enviaba la orden.", false);
+  } finally {
+    commandInFlight = false;
+  }
+}
+
+function finishLocalInteraction(reply, recordInHistory = true) {
+  reply = String(reply == null ? "" : reply);
+  appendMsg("jarvis", escapeHtml(reply));
+  if (recordInHistory) {
+    const ts = new Date().toISOString();
+    if (lastUserText) localHistoryQueue.push({ role: "user", content: lastUserText, timestamp: ts });
+    localHistoryQueue.push({ role: "assistant", content: reply, timestamp: ts });
+    lastUserText = "";
+    persistLocalQueue();
+  }
+  speakReply(reply, null);
+  document.getElementById("statusLabel").innerText = "TOCA EL REACTOR PARA HABLAR";
+}
+
+/* ---------------- HOLOGRAPHIC TARS ARC REACTOR (30 FPS GPU-OPTIMIZED) ---------------- */
+const canvas = document.getElementById("reactorCanvas");
+const ctx = canvas.getContext("2d");
+let tick = 0;
+
+function renderReactor() {
+  tick += 0.045;
+  ctx.clearRect(0, 0, 280, 280);
+  const cx = 140, cy = 140;
+
+  // Audio energy modulation (Cortana / Siri reactive dynamics)
+  let energy = 0;
+  if (micState === "LISTENING") {
+    energy = 0.35 + Math.min(1.0, micRms * 0.08);
+  } else if (micState === "SPEAKING") {
+    energy = 0.25 + 0.18 * Math.sin(tick * 3.5);
+  } else {
+    // Breathing idle wave
+    energy = 0.08 + 0.05 * Math.sin(tick * 1.8);
+  }
+
+  const baseRadius = 66;
+  const currentRadius = baseRadius + energy * 26;
+
+  // Layer 1: Outermost ethereal atmospheric glow
+  const auraGrad = ctx.createRadialGradient(cx, cy, baseRadius * 0.4, cx, cy, 138);
+  auraGrad.addColorStop(0, "rgba(0, 170, 255, 0.45)");
+  auraGrad.addColorStop(0.48, "rgba(0, 95, 255, 0.18)");
+  auraGrad.addColorStop(0.82, "rgba(0, 40, 200, 0.06)");
+  auraGrad.addColorStop(1, "rgba(0, 10, 50, 0)");
+  ctx.fillStyle = auraGrad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 138, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Layer 2: Harmonic undulating acoustic wave rings (Cortana / Siri rings)
+  const ringCount = 3;
+  for (let r = 0; r < ringCount; r++) {
+    const ringSpeed = (r % 2 === 0 ? 1 : -1) * (0.8 + r * 0.35);
+    const ringPhase = tick * ringSpeed + r * (Math.PI / 1.5);
+    const ringRadius = baseRadius + 18 + r * 15 + energy * 18;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.beginPath();
+    const points = 64;
+    for (let p = 0; p <= points; p++) {
+      const angle = (p / points) * Math.PI * 2;
+      const wave = Math.sin(angle * 4 + ringPhase) * (3.5 + energy * 9)
+                 + Math.cos(angle * 2 - ringPhase * 1.3) * (2.0 + energy * 6);
+      const rad = ringRadius + wave;
+      const x = Math.cos(angle) * rad;
+      const y = Math.sin(angle) * rad;
+      if (p === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.lineWidth = 1.8;
+    const alpha = (0.55 - r * 0.12) + energy * 0.35;
+    ctx.strokeStyle = r === 0
+      ? `rgba(0, 240, 255, ${Math.min(1, alpha)})`
+      : (r === 1 ? `rgba(60, 185, 255, ${Math.min(1, alpha)})` : `rgba(0, 120, 255, ${Math.min(1, alpha * 0.85)})`);
+    ctx.shadowColor = "#00f0ff";
+    ctx.shadowBlur = 12;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Layer 3: Solid Radiant Blue Sphere with multi-stop sapphire to cyan plasma gradient
+  const coreGrad = ctx.createRadialGradient(
+    cx - currentRadius * 0.28,
+    cy - currentRadius * 0.28,
+    currentRadius * 0.05,
+    cx,
+    cy,
+    currentRadius
+  );
+  coreGrad.addColorStop(0, "#ffffff"); // Pure brilliant white core
+  coreGrad.addColorStop(0.18, "#d5f8ff"); // Electric cyan highlight
+  coreGrad.addColorStop(0.42, "#00d0ff"); // Vivid cyan
+  coreGrad.addColorStop(0.68, "#0066ff"); // Azure electric blue
+  coreGrad.addColorStop(0.92, "#002b99"); // Deep sapphire
+  coreGrad.addColorStop(1, "#000f38"); // Obsidian perimeter
+
+  ctx.save();
+  ctx.shadowColor = micState === "LISTENING" ? "#00ffaa" : "#00f0ff";
+  ctx.shadowBlur = 26 + energy * 22;
+  ctx.fillStyle = coreGrad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, currentRadius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Layer 4: Inner celestial orbital energy arc
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(tick * 1.25);
+  const innerArcGrad = ctx.createLinearGradient(-currentRadius, 0, currentRadius, 0);
+  innerArcGrad.addColorStop(0, "rgba(255, 255, 255, 0.88)");
+  innerArcGrad.addColorStop(0.5, "rgba(0, 240, 255, 0.45)");
+  innerArcGrad.addColorStop(1, "rgba(0, 100, 255, 0)");
+  ctx.strokeStyle = innerArcGrad;
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.arc(0, 0, currentRadius * 0.82, 0, Math.PI * 0.85);
+  ctx.stroke();
+  ctx.restore();
+
+  // Layer 5: Counter-rotating orbital ring
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(-tick * 0.75);
+  ctx.strokeStyle = "rgba(180, 240, 255, 0.38)";
+  ctx.lineWidth = 1.3;
+  ctx.beginPath();
+  ctx.arc(0, 0, currentRadius * 0.64, 0, Math.PI * 0.65);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// requestAnimationFrame se detiene solo cuando la app no está visible (antes: 30 FPS siempre)
+let lastFrame = 0;
+function reactorLoop(ts) {
+  if (ts - lastFrame >= 33) { lastFrame = ts; renderReactor(); }
+  requestAnimationFrame(reactorLoop);
+}
+requestAnimationFrame(reactorLoop);
+updatePhoneTelemetry();
+
+// Sincronización adaptativa: 4 s conectado, 15 s sin conexión, pausada en segundo plano
+function scheduleSync() {
+  const delay = document.hidden ? 30000 : (isLaptopOnline ? 4000 : 15000);
+  setTimeout(async () => {
+    if (!document.hidden) await syncWithLaptop(false);
+    scheduleSync();
+  }, delay);
+}
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) { lastServerPick = 0; syncWithLaptop(false); }
+});
+if (!primaryServer && !lanServer) {
+  setTimeout(() => {
+    appendMsg("jarvis", "Bienvenido. Para empezar, configura la URL de tu servidor TARS y tu token en <b>RED</b>.");
+    openMemoryModal();
+  }, 600);
+}
+syncWithLaptop(false);
+scheduleSync();
+
+// Botón atrás de Android: cierra modales antes de salir
+window.onNativeBack = function () {
+  const open = document.querySelector(".modal.open");
+  if (open) { closeModals(); return true; }
+  const drawer = document.querySelector(".drawer.open, #modulesDrawer.open");
+  if (drawer) { closeModulesDrawer(); return true; }
+  return false;
+};
+</script>
+</body>
+</html>

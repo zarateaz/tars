@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_description">Permite que TARS pulse automáticamente el botón Enviar de WhatsApp SOLO cuando tú le ordenas enviar un mensaje por voz. No lee ni guarda tus chats.</string>
+</resources>

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tarjeta de Presentación Digital // TARS</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+      color: #fff;
+      padding: 20px;
+    }
+    .card {
+      width: 100%;
+      max-width: 420px;
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 24px;
+      padding: 34px 28px;
+      box-shadow: 0 0 35px rgba(0, 240, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      text-align: center;
+      position: relative;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 0 50px rgba(0, 240, 255, 0.35);
+    }
+    .badge {
+      display: inline-block;
+      padding: 6px 14px;
+      background: rgba(0, 240, 255, 0.15);
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      color: #00f0ff;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .avatar-wrapper {
+      width: 110px;
+      height: 110px;
+      margin: 0 auto 18px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #00f0ff, #3b82f6, #ec4899);
+      padding: 4px;
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.4);
+    }
+    .avatar {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.6rem;
+    }
+    h1 {
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: #f8fafc;
+      margin-bottom: 6px;
+      letter-spacing: 0.5px;
+    }
+    .role {
+      color: #38bdf8;
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    .bio {
+      font-size: 0.9rem;
+      color: #cbd5e1;
+      line-height: 1.5;
+      margin-bottom: 24px;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 700;
+      transition: all 0.2s ease;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #0284c7, #00f0ff);
+      color: #020617;
+      box-shadow: 0 0 18px rgba(0, 240, 255, 0.4);
+    }
+    .btn-primary:hover {
+      filter: brightness(1.15);
+      transform: translateY(-2px);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: #e2e8f0;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.16);
+      transform: translateY(-2px);
+    }
+    .links {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .link-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #e2e8f0;
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .link-row:hover {
+      background: rgba(0, 240, 255, 0.12);
+      border-color: rgba(0, 240, 255, 0.4);
+    }
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #10b981;
+      color: #fff;
+      padding: 10px 22px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+      opacity: 0;
+      transition: all 0.3s ease;
+      pointer-events: none;
+      z-index: 100;
+    }
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">Disponible para Proyectos</div>
+    <div class="avatar-wrapper">
+      <div class="avatar">👨‍💻</div>
+    </div>
+    <h1 id="name">Desarrollador FullStack</h1>
+    <p class="role" id="role">Ingeniería & Soluciones Tecnológicas</p>
+    <div class="bio" id="bio">
+      Especialista en desarrollo web, inteligencia artificial aplicada y automatización de sistemas.
+    </div>
+
+    <div class="actions">
+      <a href="https://wa.me/51999999999" target="_blank" class="btn btn-primary">
+        <span>💬 WhatsApp</span>
+      </a>
+      <button class="btn btn-secondary" onclick="copyContact()">
+        <span>📋 Copiar Datos</span>
+      </button>
+    </div>
+
+    <div class="links">
+      <a href="mailto:contacto@tech.com" class="link-row">
+        <span>✉️ contacto@tech.com</span>
+        <span>→</span>
+      </a>
+      <a href="tel:+51999999999" class="link-row">
+        <span>📞 +51 999 999 999</span>
+        <span>→</span>
+      </a>
+      <a href="https://github.com" target="_blank" class="link-row">
+        <span>💻 GitHub / Proyectos</span>
+        <span>→</span>
+      </a>
+    </div>
+  </div>
+
+  <div id="toast" class="toast">✓ ¡Contacto copiado al portapapeles!</div>
+
+  <script>
+    function copyContact() {
+      const name = document.getElementById('name').innerText;
+      const role = document.getElementById('role').innerText;
+      const text = name + " | " + role + "\nEmail: contacto@tech.com\nTel: +51 999 999 999";
+      navigator.clipboard.writeText(text).then(() => {
+        const toast = document.getElementById('toast');
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2200);
+      });
+    }
+  </script>
+</body>
+</html>

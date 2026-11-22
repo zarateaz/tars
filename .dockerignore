@@ -1,0 +1,39 @@
+# Nunca meter secretos ni datos personales en la imagen
+.env
+.env.*
+!.env.example
+*.pem
+*.bin
+*.keystore
+reloj/
+vault/
+
+# Estado en tiempo de ejecución (va en el volumen /app/data)
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!public/**/*.json
+memory_store.json
+audio_cache/
+*.log
+
+# Pesado / no necesario en el servidor
+node_modules/
+.next/
+.venv/
+__pycache__/
+*.pyc
+.git/
+bin/
+models/
+android-apk/
+*.apk
+*.idsig
+public/*.apk
+public/tunnel_info.json
+*.pdf
+*.tex
+*.aux
+*.out
+tsconfig.tsbuildinfo

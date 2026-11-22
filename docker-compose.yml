@@ -1,0 +1,73 @@
+# TARS en un VPS
+#
+#   cp .env.example .env   # y rellena DEEPSEEK_API_KEY, STARK_AUTH_TOKEN, JARVIS_DOMAIN
+#   docker compose up -d --build                    # solo el núcleo en 127.0.0.1:3000
+#   docker compose --profile https up -d --build    # + Caddy con HTTPS automático
+#   docker compose --profile tunnel up -d --build   # o + Cloudflare Tunnel (sin abrir puertos)
+
+services:
+  jearvis:
+    build: .
+    image: tars:latest
+    container_name: tars-core
+    restart: unless-stopped
+    # Solo escucha en localhost del VPS: el acceso público entra por Caddy o el túnel
+    ports:
+      - "127.0.0.1:${TARS_PORT:-3300}:3000"
+    environment:
+      TARS_WORKSPACE: /app/data/workspace
+      JARVIS_MODE: cloud
+      JARVIS_ALLOW_CLI: "false"
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:?Falta DEEPSEEK_API_KEY en .env}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
+      STARK_AUTH_TOKEN: ${STARK_AUTH_TOKEN:?Falta STARK_AUTH_TOKEN en .env (openssl rand -hex 32)}
+      JARVIS_VOICE: ${JARVIS_VOICE:-es-MX-JorgeNeural}
+      JARVIS_VOICE_RATE: ${JARVIS_VOICE_RATE:--6%}
+      JARVIS_VOICE_PITCH: ${JARVIS_VOICE_PITCH:--12Hz}
+      JARVIS_VOICE_FX: ${JARVIS_VOICE_FX:-tars}
+      TARS_HUMOR: ${TARS_HUMOR:-75}
+      TARS_HONESTY: ${TARS_HONESTY:-90}
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+      JARVIS_ALLOWED_ORIGINS: ${JARVIS_ALLOWED_ORIGINS:-}
+    volumes:
+      - jearvis-data:/app/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 768m
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  caddy:
+    profiles: ["https"]
+    image: caddy:2-alpine
+    container_name: jearvis-caddy
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      JARVIS_DOMAIN: ${JARVIS_DOMAIN:-localhost}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [jearvis]
+
+  tunnel:
+    profiles: ["tunnel"]
+    image: cloudflare/cloudflared:latest
+    container_name: jearvis-tunnel
+    restart: unless-stopped
+    network_mode: host
+    # Túnel con nombre (URL fija). Créalo en Cloudflare Zero Trust → Networks → Tunnels,
+    # con Public Hostname apuntando a http://127.0.0.1:3000, y copia su token aquí.
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on: [jearvis]
+
+volumes:
+  jearvis-data:
+  caddy-data:
+  caddy-config:

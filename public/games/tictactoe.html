@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TRES EN RAYA // TARS CYBERPUNK</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body {
+      background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .wrapper {
+      background: rgba(30, 41, 59, 0.85);
+      border: 2px solid #00f0ff;
+      border-radius: 24px;
+      padding: 30px;
+      box-shadow: 0 0 35px rgba(0, 240, 255, 0.3);
+      text-align: center;
+      max-width: 420px;
+      width: 100%;
+    }
+    h1 { font-size: 22px; color: #00f0ff; margin-bottom: 8px; letter-spacing: 2px; }
+    .status { font-size: 15px; color: #94a3b8; margin-bottom: 20px; min-height: 22px; font-weight: 600; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 90px);
+      grid-template-rows: repeat(3, 90px);
+      gap: 10px;
+      margin: 0 auto 20px;
+      justify-content: center;
+    }
+    .cell {
+      background: #020617;
+      border: 2px solid rgba(0, 240, 255, 0.4);
+      border-radius: 14px;
+      font-size: 38px;
+      font-weight: 900;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .cell:hover:not(.taken) {
+      border-color: #00f0ff;
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+    }
+    .cell.x { color: #00f0ff; text-shadow: 0 0 15px #00f0ff; }
+    .cell.o { color: #ec4899; text-shadow: 0 0 15px #ec4899; }
+    .btn {
+      background: linear-gradient(135deg, #0284c7, #00f0ff);
+      color: #020617;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <h1>⚡ TRES EN RAYA CYBER</h1>
+    <div id="status" class="status">Tu turno (X) vs TARS (O)</div>
+    <div class="grid" id="grid">
+      <div class="cell" onclick="makeMove(0)"></div>
+      <div class="cell" onclick="makeMove(1)"></div>
+      <div class="cell" onclick="makeMove(2)"></div>
+      <div class="cell" onclick="makeMove(3)"></div>
+      <div class="cell" onclick="makeMove(4)"></div>
+      <div class="cell" onclick="makeMove(5)"></div>
+      <div class="cell" onclick="makeMove(6)"></div>
+      <div class="cell" onclick="makeMove(7)"></div>
+      <div class="cell" onclick="makeMove(8)"></div>
+    </div>
+    <button class="btn" onclick="resetBoard()">REINICIAR PARTIDA</button>
+  </div>
+
+  <script>
+    let board = Array(9).fill('');
+    let isGameOver = false;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = new AudioCtx();
+
+    function beep(f, d) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.frequency.setValueAtTime(f, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + d);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + d);
+    }
+
+    function checkWin(b) {
+      const wins = [
+        [0,1,2], [3,4,5], [6,7,8],
+        [0,3,6], [1,4,7], [2,5,8],
+        [0,4,8], [2,4,6]
+      ];
+      for (let [a,b1,c] of wins) {
+        if (b[a] && b[a] === b[b1] && b[a] === b[c]) return b[a];
+      }
+      return b.includes('') ? null : 'tie';
+    }
+
+    function makeMove(idx) {
+      if (board[idx] || isGameOver) return;
+      board[idx] = 'X';
+      beep(550, 0.1);
+      updateDisplay();
+
+      let res = checkWin(board);
+      if (res) return finish(res);
+
+      document.getElementById('status').innerText = 'TARS pensando...';
+      setTimeout(aiMove, 300);
+    }
+
+    function aiMove() {
+      if (isGameOver) return;
+      let empty = board.map((v, i) => v === '' ? i : null).filter(v => v !== null);
+      if (empty.length === 0) return;
+      let pick = empty[Math.floor(Math.random() * empty.length)];
+      board[pick] = 'O';
+      beep(380, 0.1);
+      updateDisplay();
+
+      let res = checkWin(board);
+      if (res) return finish(res);
+      document.getElementById('status').innerText = 'Tu turno (X)';
+    }
+
+    function updateDisplay() {
+      const cells = document.querySelectorAll('.cell');
+      board.forEach((val, i) => {
+        cells[i].innerText = val;
+        cells[i].className = 'cell' + (val ? ' taken ' + val.toLowerCase() : '');
+      });
+    }
+
+    function finish(winner) {
+      isGameOver = true;
+      const status = document.getElementById('status');
+      if (winner === 'X') {
+        beep(750, 0.3);
+        status.style.color = '#34d399';
+        status.innerText = '🎉 ¡Ganaste la partida!';
+      } else if (winner === 'O') {
+        beep(220, 0.3);
+        status.style.color = '#ec4899';
+        status.innerText = '🤖 TARS ha ganado';
+      } else {
+        beep(440, 0.2);
+        status.style.color = '#94a3b8';
+        status.innerText = '🤝 ¡Empate técnico!';
+      }
+    }
+
+    function resetBoard() {
+      board = Array(9).fill('');
+      isGameOver = false;
+      const status = document.getElementById('status');
+      status.style.color = '#94a3b8';
+      status.innerText = 'Tu turno (X) vs TARS (O)';
+      updateDisplay();
+    }
+  </script>
+</body>
+</html>

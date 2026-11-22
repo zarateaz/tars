@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>J.E.A.R.V.I.S. // Cyber Snake Mark VII</title>
+  <style>
+    body {
+      margin: 0;
+      background: #070F2B;
+      color: #00B4D8;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+    h1 {
+      margin: 0 0 10px 0;
+      font-size: 26px;
+      letter-spacing: 2px;
+      text-shadow: 0 0 10px #00B4D8;
+    }
+    #score-board {
+      font-size: 18px;
+      margin-bottom: 15px;
+      color: #FFB703;
+      font-weight: bold;
+    }
+    canvas {
+      background: #0D1B2A;
+      border: 3px solid #00B4D8;
+      box-shadow: 0 0 20px rgba(0, 180, 216, 0.4);
+      border-radius: 8px;
+    }
+    .hint {
+      margin-top: 15px;
+      color: #8ECAE6;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>⚡ J.E.A.R.V.I.S. — SNAKE GAME ⚡</h1>
+  <div id="score-board">PUNTUACIÓN: <span id="score">0</span> | RÉCORD: <span id="high-score">0</span></div>
+  <canvas id="gameCanvas" width="400" height="400"></canvas>
+  <div class="hint">Usa las flechas del teclado ⬆️ ⬇️ ⬅️ ➡️ para moverte</div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const grid = 20;
+    let count = 0;
+    let score = 0;
+    let highScore = 0;
+
+    let snake = {
+      x: 160,
+      y: 160,
+      dx: grid,
+      dy: 0,
+      cells: [],
+      maxCells: 4
+    };
+
+    let apple = { x: 320, y: 320 };
+
+    function getRandomInt(min, max) {
+      return Math.floor(Math.random() * (max - min)) + min;
+    }
+
+    function resetGame() {
+      snake.x = 160;
+      snake.y = 160;
+      snake.cells = [];
+      snake.maxCells = 4;
+      snake.dx = grid;
+      snake.dy = 0;
+      score = 0;
+      document.getElementById('score').innerText = score;
+      apple.x = getRandomInt(0, 20) * grid;
+      apple.y = getRandomInt(0, 20) * grid;
+    }
+
+    function loop() {
+      requestAnimationFrame(loop);
+      if (++count < 6) return; // velocidad
+      count = 0;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      snake.x += snake.dx;
+      snake.y += snake.dy;
+
+      if (snake.x < 0) snake.x = canvas.width - grid;
+      else if (snake.x >= canvas.width) snake.x = 0;
+      if (snake.y < 0) snake.y = canvas.height - grid;
+      else if (snake.y >= canvas.height) snake.y = 0;
+
+      snake.cells.unshift({x: snake.x, y: snake.y});
+      if (snake.cells.length > snake.maxCells) snake.cells.pop();
+
+      // Dibujar Manzana / Reactor Arc
+      ctx.fillStyle = '#FF0055';
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#FF0055';
+      ctx.fillRect(apple.x, apple.y, grid - 2, grid - 2);
+
+      // Dibujar Serpiente
+      ctx.fillStyle = '#00B4D8';
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = '#00B4D8';
+      snake.cells.forEach(function(cell, index) {
+        if (index === 0) ctx.fillStyle = '#90E0EF'; // cabeza
+        else ctx.fillStyle = '#0077B6'; // cuerpo
+        ctx.fillRect(cell.x, cell.y, grid - 2, grid - 2);
+
+        // Comer manzana
+        if (cell.x === apple.x && cell.y === apple.y) {
+          snake.maxCells++;
+          score += 10;
+          document.getElementById('score').innerText = score;
+          if (score > highScore) {
+            highScore = score;
+            document.getElementById('high-score').innerText = highScore;
+          }
+          apple.x = getRandomInt(0, 20) * grid;
+          apple.y = getRandomInt(0, 20) * grid;
+        }
+
+        // Colisión con uno mismo
+        for (let i = index + 1; i < snake.cells.length; i++) {
+          if (cell.x === snake.cells[i].x && cell.y === snake.cells[i].y) {
+            resetGame();
+          }
+        }
+      });
+      ctx.shadowBlur = 0;
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if (e.which === 37 && snake.dx === 0) { snake.dx = -grid; snake.dy = 0; }
+      else if (e.which === 38 && snake.dy === 0) { snake.dy = -grid; snake.dx = 0; }
+      else if (e.which === 39 && snake.dx === 0) { snake.dx = grid; snake.dy = 0; }
+      else if (e.which === 40 && snake.dy === 0) { snake.dy = grid; snake.dx = 0; }
+    });
+
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

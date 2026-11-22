@@ -1,0 +1,19 @@
+# Servicio de usuario systemd para el satélite en la laptop.
+#   cp deploy/jearvis-satellite.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now jearvis-satellite
+#   journalctl --user -u jearvis-satellite -f
+[Unit]
+Description=J.E.A.R.V.I.S. Ground Satellite (agente de la laptop)
+After=graphical-session.target network-online.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/jearvis
+EnvironmentFile=%h/jearvis/satellite.env
+ExecStart=/usr/bin/python3 %h/jearvis/laptop_satellite.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

@@ -1,0 +1,12 @@
+# HTTPS automático (Let's Encrypt). Apunta el DNS A de JARVIS_DOMAIN a la IP del VPS
+# y abre los puertos 80 y 443 en el firewall.
+{$JARVIS_DOMAIN} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		-Server
+	}
+	reverse_proxy 127.0.0.1:3000
+}
