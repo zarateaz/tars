@@ -40,6 +40,25 @@ echo "   ✅ Contenedor sano"
 
 echo "🌐 2/4 nginx (solo HTTP para validar el certificado)..."
 mkdir -p "$ACME"
+
+# Algunos nginx.conf NO cargan conf.d/*.conf (solo includes puntuales).
+# En ese caso se añade "include .../tars.conf;" al final del bloque http, con copia de seguridad.
+NGINX_MAIN=/etc/nginx/nginx.conf
+NGINX_BACKUP=""
+restore_nginx() {
+  echo "↩️  Restaurando configuración de nginx original..."
+  [ -n "$NGINX_BACKUP" ] && cp "$NGINX_BACKUP" "$NGINX_MAIN"
+  rm -f "$CONF"
+  nginx -t && systemctl reload nginx
+}
+if ! grep -qE "^[^#]*include[[:space:]]+(/etc/nginx/)?conf\.d/(\*|tars)\.conf" "$NGINX_MAIN"; then
+  NGINX_BACKUP="$NGINX_MAIN.bak-tars-$(date +%Y%m%d%H%M%S)"
+  cp "$NGINX_MAIN" "$NGINX_BACKUP"
+  LAST_BRACE=$(grep -n '^}' "$NGINX_MAIN" | tail -1 | cut -d: -f1)
+  [ -n "$LAST_BRACE" ] || { echo "❌ No encontré el cierre del bloque http en $NGINX_MAIN"; exit 1; }
+  sed -i "${LAST_BRACE}i\\    include /etc/nginx/conf.d/tars.conf;" "$NGINX_MAIN"
+  echo "   + include de tars.conf añadido (copia: $NGINX_BACKUP)"
+fi
 cat > "$CONF" <<NGINX
 server {
     listen 80;
@@ -49,11 +68,25 @@ server {
     location / { return 301 https://\$host\$request_uri; }
 }
 NGINX
-nginx -t && systemctl reload nginx
+if ! nginx -t; then restore_nginx; exit 1; fi
+systemctl reload nginx
+
+# Comprobación previa: el reto ACME debe llegar a ESTE bloque (no al de otro sitio)
+echo ok > "$ACME/tars-check"
+mkdir -p "$ACME/.well-known/acme-challenge" && mv "$ACME/tars-check" "$ACME/.well-known/acme-challenge/tars-check"
+if [ "$(curl -s --max-time 10 "http://$DOMAIN/.well-known/acme-challenge/tars-check")" != "ok" ]; then
+  echo "❌ nginx no está sirviendo $DOMAIN desde $CONF (otra configuración lo intercepta)."
+  restore_nginx; exit 1
+fi
+rm -f "$ACME/.well-known/acme-challenge/tars-check"
+echo "   ✅ nginx responde para $DOMAIN"
 
 echo "🔒 3/4 Certificado HTTPS..."
 if [ ! -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
-  certbot certonly --webroot -w "$ACME" -d "$DOMAIN" --non-interactive --agree-tos --register-unsafely-without-email
+  if ! certbot certonly --webroot -w "$ACME" -d "$DOMAIN" --non-interactive --agree-tos --register-unsafely-without-email; then
+    echo "❌ certbot falló (ver arriba). nginx queda sirviendo solo HTTP→HTTPS para $DOMAIN; INFOSISTEL no se ve afectado."
+    exit 1
+  fi
 fi
 
 echo "🌐 4/4 nginx HTTPS → 127.0.0.1:$PORT..."
@@ -93,7 +126,7 @@ NGINX
 if nginx -t; then
   systemctl reload nginx
 else
-  echo "❌ nginx -t falló; restaurando sin HTTPS"; rm -f "$CONF"; systemctl reload nginx; exit 1
+  echo "❌ nginx -t falló"; restore_nginx; exit 1
 fi
 
 sleep 1
