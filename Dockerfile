@@ -11,7 +11,11 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY package*.json ./
-RUN npm ci
+RUN npm config set fetch-retries 5 \
+ && npm config set fetch-retry-mintimeout 20000 \
+ && npm config set fetch-retry-maxtimeout 120000 \
+ && npm config set maxsockets 6 \
+ && npm ci --no-audit --no-fund --loglevel=warn
 
 COPY . .
 RUN npm run build
@@ -36,7 +40,11 @@ RUN python3 -m venv /app/.venv \
  && /app/.venv/bin/pip install --no-cache-dir edge-tts
 
 COPY package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm config set fetch-retries 5 \
+ && npm config set fetch-retry-mintimeout 20000 \
+ && npm config set maxsockets 6 \
+ && npm ci --omit=dev --no-audit --no-fund --loglevel=warn \
+ && npm cache clean --force
 
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
@@ -57,11 +65,11 @@ RUN mkdir -p /app/data/audio_cache \
  && chown -R node:node /app/data /app/public /app/.next
 
 USER node
-EXPOSE 3000
+EXPOSE 3300
 VOLUME ["/app/data"]
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD curl -fsS http://127.0.0.1:3000/api/health || exit 1
+  CMD curl -fsS "http://127.0.0.1:${PORT}/api/health" || exit 1
 
 ENTRYPOINT ["/usr/bin/tini", "--", "docker-entrypoint.sh"]
-CMD ["node_modules/.bin/next", "start", "-H", "0.0.0.0", "-p", "3000"]
+CMD ["sh", "-c", "exec node_modules/.bin/next start -H \"${HOSTNAME}\" -p \"${PORT}\""]

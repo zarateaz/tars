@@ -53,12 +53,12 @@ $SUDO docker compose "${ARGS[@]}" up -d --build
 
 echo -e "${YELLOW}⏳ Esperando al núcleo...${NC}"
 for _ in $(seq 1 30); do
-  if curl -fsS http://127.0.0.1:3000/api/health >/dev/null 2>&1; then
+  if curl -fsS "http://127.0.0.1:$(get TARS_PORT || true)$( [ -z "$(get TARS_PORT)" ] && echo 3300)/api/health" >/dev/null 2>&1; then
     echo -e "${GREEN}✅ J.E.A.R.V.I.S. activo.${NC}"
     case "$PROFILE" in
       https)  echo "🌐 https://$(get JARVIS_DOMAIN)" ;;
       tunnel) echo "🌐 La URL es el hostname que configuraste en Cloudflare." ;;
-      *)      echo "🔒 Solo en 127.0.0.1:3000. Usa: ssh -L 3000:127.0.0.1:3000 usuario@vps" ;;
+      *)      echo "🔒 Solo en 127.0.0.1:3300. Usa: ssh -L 3300:127.0.0.1:3300 usuario@vps" ;;
     esac
     echo "🔑 Inicia sesión con el STARK_AUTH_TOKEN de .env (no lo compartas)."
     exit 0

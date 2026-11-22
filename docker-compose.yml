@@ -7,14 +7,20 @@
 
 services:
   jearvis:
-    build: .
+    build:
+      context: .
+      # Red del host al construir: evita fallos de DNS/IPv6 del puente de Docker
+      # (síntoma: "npm error Exit handler never called!")
+      network: host
     image: tars:latest
     container_name: tars-core
     restart: unless-stopped
-    # Solo escucha en localhost del VPS: el acceso público entra por Caddy o el túnel
-    ports:
-      - "127.0.0.1:${TARS_PORT:-3300}:3000"
+    # Red del host (la red puente de Docker puede no tener salida a internet en algunos VPS).
+    # Escucha SOLO en 127.0.0.1:${TARS_PORT}; el acceso público entra por nginx con HTTPS.
+    network_mode: host
     environment:
+      PORT: ${TARS_PORT:-3300}
+      HOSTNAME: 127.0.0.1
       TARS_WORKSPACE: /app/data/workspace
       JARVIS_MODE: cloud
       JARVIS_ALLOW_CLI: "false"
