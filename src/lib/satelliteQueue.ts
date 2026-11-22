@@ -27,6 +27,7 @@ export interface SatelliteTelemetry {
   ramTotalMb: number;
   batteryPct?: number;
   tvConnected: boolean;
+  lanUrl?: string;
   lastHeartbeat: string;
 }
 

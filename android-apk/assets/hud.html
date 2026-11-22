@@ -1344,6 +1344,65 @@ let localHistoryQueue = []; // interacciones resueltas en el teléfono, pendient
 try { localHistoryQueue = JSON.parse(localStorage.getItem("zarate_local_queue") || "[]") || []; } catch (e) {}
 let lastUserText = "";
 let commandInFlight = false;
+
+/* ---- MODO CASA: satélite de la laptop en el mismo Wi-Fi (trackpad / vista en vivo sin internet) ---- */
+let directLan = "";
+let satelliteLanUrl = localStorage.getItem("zarate_sat_lan") || "";
+let onWifi = (window.ZarateBridge && window.ZarateBridge.isOnWifi) ? window.ZarateBridge.isOnWifi() : true;
+let lastLanCheck = 0;
+let lanCheckRunning = false;
+function lanCandidates() {
+  const c = [];
+  if (satelliteLanUrl) c.push(satelliteLanUrl);
+  const m = /^http:\/\/([0-9.]+)(?::\d+)?/.exec(lanServer || "");
+  if (m) c.push("http://" + m[1] + ":8765");
+  return c.filter((u, i, a) => u && a.indexOf(u) === i);
+}
+function setDirect(u) {
+  directLan = u || "";
+  if (window.ZarateBridge && window.ZarateBridge.setDirectHost) window.ZarateBridge.setDirectHost(directLan);
+  updateConnBadge();
+}
+async function checkHomeLan(force = false) {
+  if (lanCheckRunning) return;
+  if (!onWifi) { setDirect(""); return; }
+  if (!force && Date.now() - lastLanCheck < 20000) return;
+  lanCheckRunning = true;
+  lastLanCheck = Date.now();
+  try {
+    for (const u of lanCandidates()) {
+      try {
+        const r = await fetch(u + "/health", { signal: AbortSignal.timeout(900), cache: "no-store" });
+        const j = r.ok ? await r.json() : null;
+        if (j && j.name === "tars-satellite") { setDirect(u); return; }
+      } catch (e) {}
+    }
+    setDirect("");
+  } finally {
+    lanCheckRunning = false;
+  }
+}
+function directHeaders() {
+  return { "Content-Type": "application/json", "X-Stark-Token": window.getStarkToken() };
+}
+let lastBadge = { mode: "", ms: 0 };
+function updateConnBadge(mode, ms) {
+  if (mode) lastBadge = { mode, ms };
+  const st = document.getElementById("syncText");
+  if (!st || !lastBadge.mode) return;
+  st.innerText = lastBadge.mode + (directLan ? " + CASA ⚡" : "") + " // " + lastBadge.ms + "ms";
+}
+window.onNativeNetworkChanged = function (isWifi) {
+  onWifi = Boolean(isWifi);
+  lastServerPick = 0;
+  setDirect("");
+  if (onWifi) setTimeout(() => checkHomeLan(true), 1200); // esperar a que el Wi-Fi tenga IP
+  setTimeout(() => syncWithLaptop(false), 1500);
+};
+window.onNativeDirectLost = function () {
+  setDirect("");
+  setTimeout(() => checkHomeLan(true), 4000);
+};
 let isLaptopOnline = false;
 let lastLatencyMs = 0;
 let micState = "IDLE";
@@ -1416,7 +1475,8 @@ function serverCandidates() {
 async function pickServer(force = false) {
   if (!force && isLaptopOnline && activeServer && Date.now() - lastServerPick < 20000) return activeServer;
   // En casa probamos primero la LAN (más rápida); fuera, el VPS
-  const order = [lanServer, primaryServer, activeServer].filter((u, i, a) => u && a.indexOf(u) === i);
+  // Cerebro: siempre primero el servidor principal (VPS = una sola memoria). El de casa es respaldo.
+  const order = [primaryServer, lanServer, activeServer].filter((u, i, a) => u && a.indexOf(u) === i);
   for (const u of order) {
     try {
       const r = await fetch(u + "/api/health", { signal: AbortSignal.timeout(u.startsWith("https") ? 6000 : 1800), cache: "no-store" });
@@ -1646,9 +1706,14 @@ async function syncWithLaptop(manual = false) {
 
     const dot = document.getElementById("syncDot");
     if (dot) { dot.style.background = "#00ffaa"; dot.style.boxShadow = "0 0 8px #00ffaa"; }
-    const modeTag = baseUrl === lanServer ? "CASA" : (/^https:/.test(baseUrl) ? "NUBE" : "LAN");
-    const st = document.getElementById("syncText");
-    if (st) st.innerText = modeTag + " // " + lastLatencyMs + "ms";
+    const modeTag = baseUrl === lanServer ? "LOCAL" : (/^https:/.test(baseUrl) ? "NUBE" : "LAN");
+    updateConnBadge(modeTag, lastLatencyMs);
+    if (data.satellite && data.satellite.lanUrl && data.satellite.lanUrl !== satelliteLanUrl) {
+      satelliteLanUrl = data.satellite.lanUrl;
+      localStorage.setItem("zarate_sat_lan", satelliteLanUrl);
+      lastLanCheck = 0;
+    }
+    if (onWifi) checkHomeLan(false); else if (directLan) setDirect("");
 
     if (data.laptopStats) {
       const cpuVal = data.laptopStats.cpuPercent ?? data.laptopStats.cpuUsage ?? 0;
@@ -1690,6 +1755,7 @@ async function syncWithLaptop(manual = false) {
 
 function markOffline(label) {
   isLaptopOnline = false;
+  lastBadge.mode = "";
   const dot = document.getElementById("syncDot");
   if (dot) { dot.style.background = label === "TOKEN INVÁLIDO" ? "#ffaa00" : "#ff4d6d"; dot.style.boxShadow = "0 0 8px " + dot.style.background; }
   const syncTxt = document.getElementById("syncText");
@@ -2507,7 +2573,10 @@ async function fetchLiveVisionFrame() {
   try {
     const src = trackpadMode === "tv" ? "tv" : (trackpadMode === "webcam" ? "webcam" : "screen");
     if (src !== lastFrameSource) { lastFrameSource = src; lastFrameTs = 0; }
-    const r = await fetch(activeServer + "/api/live-vision?source=" + src + "&since=" + lastFrameTs, { signal: AbortSignal.timeout(8000) });
+    const r = directLan
+      ? await fetch(directLan + "/frame?source=" + src + "&since=" + lastFrameTs, { headers: directHeaders(), signal: AbortSignal.timeout(2500) })
+          .catch((e) => { window.onNativeDirectLost(); throw e; })
+      : await fetch(activeServer + "/api/live-vision?source=" + src + "&since=" + lastFrameTs, { signal: AbortSignal.timeout(8000) });
     if (r.ok) {
       const j = await r.json();
       if (j.success && j.imageBase64) {
@@ -2532,7 +2601,9 @@ async function pollLiveVisionLoop() {
   if (!modal || !modal.classList.contains("open")) return;
   await fetchLiveVisionFrame();
   if (trackpadMode !== "touch" && modal.classList.contains("open")) {
-    const delay = trackpadMode === "screen" ? 350 : (trackpadMode === "tv" ? 1000 : 500);
+    const delay = directLan
+      ? (trackpadMode === "screen" ? 120 : (trackpadMode === "tv" ? 800 : 250))
+      : (trackpadMode === "screen" ? 350 : (trackpadMode === "tv" ? 1000 : 500));
     liveVisionTimer = setTimeout(pollLiveVisionLoop, delay);
   }
 }
@@ -2552,11 +2623,17 @@ async function onLiveScreenTap(e) {
   if (window.ZarateBridge && window.ZarateBridge.vibrate) window.ZarateBridge.vibrate(25);
 
   try {
-    await fetch(activeServer + "/api/live-vision", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ target: trackpadMode === "tv" ? "tv" : "screen", xNorm, yNorm, button: "left" })
-    });
+    const tapBody = JSON.stringify({ target: trackpadMode === "tv" ? "tv" : "screen", xNorm, yNorm, button: "left" });
+    let sentDirect = false;
+    if (directLan) {
+      try {
+        const rr = await fetch(directLan + "/tap", { method: "POST", headers: directHeaders(), body: tapBody, signal: AbortSignal.timeout(1500) });
+        sentDirect = rr.ok;
+      } catch (e) { window.onNativeDirectLost(); }
+    }
+    if (!sentDirect) {
+      await fetch(activeServer + "/api/live-vision", { method: "POST", headers: { "Content-Type": "application/json" }, body: tapBody });
+    }
     setTimeout(fetchLiveVisionFrame, 160);
   } catch (err) {}
 }
@@ -2700,6 +2777,13 @@ async function remoteInput(payload) {
   }
   if (body.action === "click" || body.action === "rclick") {
     if (window.ZarateBridge && window.ZarateBridge.vibrate) window.ZarateBridge.vibrate(25);
+  }
+  if (directLan) {
+    try {
+      const rr = await fetch(directLan + "/input", { method: "POST", headers: directHeaders(), body: JSON.stringify(body), signal: AbortSignal.timeout(1500) });
+      if (rr.ok) return;
+    } catch (e) {}
+    window.onNativeDirectLost();
   }
   try {
     await fetch(activeServer + "/api/remote-input", {
@@ -3400,6 +3484,7 @@ if (!primaryServer && !lanServer) {
 }
 syncWithLaptop(false);
 scheduleSync();
+setTimeout(() => checkHomeLan(true), 800);
 
 // Botón atrás de Android: cierra modales antes de salir
 window.onNativeBack = function () {

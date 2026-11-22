@@ -19,6 +19,9 @@ import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.net.Uri;
 import android.os.BatteryManager;
 import android.os.Build;
@@ -92,6 +95,10 @@ public class MainActivity extends Activity {
     private final ExecutorService netExec = Executors.newSingleThreadExecutor();
     private volatile String authToken = "";
     private volatile String activeServerHost = "http://127.0.0.1:3000";
+    /** "Modo casa": URL del satélite en el Wi-Fi local (trackpad directo, sin internet). Vacío = usar el VPS. */
+    private volatile String directHost = "";
+    private volatile Boolean lastOnWifi = null;
+    private ConnectivityManager.NetworkCallback netCallback;
     private final Object moveLock = new Object();
     private int pendingDx = 0, pendingDy = 0;
     private boolean moveInFlight = false;
@@ -197,6 +204,7 @@ public class MainActivity extends Activity {
         webView.addJavascriptInterface(new ZarateBridge(), "ZarateBridge");
         setContentView(webView);
         webView.loadUrl("file:///android_asset/hud.html");
+        registerNetworkWatcher();
     }
 
     private boolean handleNavigation(Uri uri) {
@@ -224,6 +232,48 @@ public class MainActivity extends Activity {
         });
     }
 
+    /** Avisa al HUD en cuanto el teléfono entra o sale del Wi-Fi (casa ↔ datos móviles). */
+    private void registerNetworkWatcher() {
+        try {
+            ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (cm == null) return;
+            netCallback = new ConnectivityManager.NetworkCallback() {
+                @Override
+                public void onCapabilitiesChanged(Network network, NetworkCapabilities caps) {
+                    notifyNetwork(caps != null && caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI));
+                }
+
+                @Override
+                public void onLost(Network network) {
+                    mainHandler.postDelayed(new Runnable() {
+                        @Override
+                        public void run() { notifyNetwork(isOnWifiNow()); }
+                    }, 600);
+                }
+            };
+            cm.registerDefaultNetworkCallback(netCallback);
+        } catch (Exception ignored) {}
+    }
+
+    private boolean isOnWifiNow() {
+        try {
+            ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (cm == null) return false;
+            Network n = cm.getActiveNetwork();
+            NetworkCapabilities c = n == null ? null : cm.getNetworkCapabilities(n);
+            return c != null && c.hasTransport(NetworkCapabilities.TRANSPORT_WIFI);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void notifyNetwork(boolean onWifi) {
+        if (lastOnWifi != null && lastOnWifi == onWifi) return;
+        lastOnWifi = onWifi;
+        if (!onWifi) directHost = ""; // fuera de casa: nada directo
+        sendJs("window.onNativeNetworkChanged && window.onNativeNetworkChanged(" + onWifi + ")");
+    }
+
     private void setKeepScreenOn(final boolean on) {
         mainHandler.post(new Runnable() {
             @Override
@@ -235,10 +285,26 @@ public class MainActivity extends Activity {
     }
 
     /** POST JSON al servidor activo con el token Stark. Devuelve el código HTTP o -1. */
+    /** Trackpad: directo al satélite en casa, o al VPS por internet. */
+    private int postInput(String jsonBody, int connectMs, int readMs) {
+        String direct = directHost;
+        if (!direct.isEmpty()) {
+            int code = postJsonUrl(direct + "/input", jsonBody, 800, 1500);
+            if (code == 200) return code;
+            directHost = ""; // el satélite local dejó de responder → volver al VPS
+            sendJs("window.onNativeDirectLost && window.onNativeDirectLost()");
+        }
+        return postJsonUrl(activeServerHost + "/api/remote-input", jsonBody, connectMs, readMs);
+    }
+
     private int postJson(String path, String jsonBody, int connectMs, int readMs) {
+        return postJsonUrl(activeServerHost + path, jsonBody, connectMs, readMs);
+    }
+
+    private int postJsonUrl(String fullUrl, String jsonBody, int connectMs, int readMs) {
         HttpURLConnection conn = null;
         try {
-            URL url = new URL(activeServerHost + path);
+            URL url = new URL(fullUrl);
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/json");
@@ -289,6 +355,10 @@ public class MainActivity extends Activity {
         isRecordingVoice = false;
         handsFreeWakeMode = false;
         netExec.shutdownNow();
+        try {
+            ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (cm != null && netCallback != null) cm.unregisterNetworkCallback(netCallback);
+        } catch (Exception ignored) {}
         if (instance == this) {
             instance = null;
         }
@@ -1102,6 +1172,16 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void setDirectHost(String url) {
+            directHost = (url != null && url.trim().matches("^http://[0-9.]+:[0-9]+$")) ? url.trim() : "";
+        }
+
+        @JavascriptInterface
+        public boolean isOnWifi() {
+            return isOnWifiNow();
+        }
+
+        @JavascriptInterface
         public void setAuthToken(String token) {
             authToken = token == null ? "" : token.trim();
         }
@@ -1126,8 +1206,7 @@ public class MainActivity extends Activity {
                                 pendingDx = 0; pendingDy = 0;
                                 if (mx == 0 && my == 0) { moveInFlight = false; return; }
                             }
-                            postJson("/api/remote-input",
-                                "{\"action\":\"move\",\"dx\":" + mx + ",\"dy\":" + my + "}", 1500, 1500);
+                            postInput("{\"action\":\"move\",\"dx\":" + mx + ",\"dy\":" + my + "}", 1500, 1500);
                         }
                     }
                 });
@@ -1143,7 +1222,7 @@ public class MainActivity extends Activity {
                 netExec.execute(new Runnable() {
                     @Override
                     public void run() {
-                        postJson("/api/remote-input", body, 1500, 2500);
+                        postInput(body, 1500, 2500);
                     }
                 });
             } catch (Exception ignored) {}

@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getSatelliteTelemetry } from "@/lib/satelliteQueue";
+import { IS_CLOUD } from "@/lib/system";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -221,7 +223,20 @@ export async function POST(req: Request) {
       setProximityGuardian(body.proximityGuardian);
     }
 
-    const laptopStats = await getSystemStats();
+    // En la nube, "la laptop" es la del satélite (no el VPS)
+    const sat = getSatelliteTelemetry();
+    const satFresh = sat && Date.now() - new Date(sat.lastHeartbeat).getTime() < 30000;
+    const laptopStats = IS_CLOUD
+      ? satFresh
+        ? {
+            cpuPercent: sat.cpuPct,
+            ramPercent: sat.ramTotalMb ? Math.round(((sat.ramTotalMb - sat.ramFreeMb) / sat.ramTotalMb) * 1000) / 10 : 0,
+            ramUsedGb: Math.round(((sat.ramTotalMb - sat.ramFreeMb) / 1024) * 10) / 10,
+            batteryPct: sat.batteryPct,
+            online: true,
+          }
+        : { cpuPercent: 0, ramPercent: 0, ramUsedGb: 0, online: false }
+      : await getSystemStats();
     return NextResponse.json({
       success: true,
       node: "ZARATE-LAPTOP-CORE",
@@ -232,6 +247,8 @@ export async function POST(req: Request) {
       proximityGuardian: isProximityGuardianEnabled(),
       pendingPhoneCommands: drainPhoneCommands(),
       globalEndpoints: getGlobalEndpoints(),
+      // Para el "modo casa": URL local del satélite (el teléfono la prueba solo si está en Wi-Fi)
+      satellite: satFresh && sat ? { lanUrl: sat.lanUrl || null, hostname: sat.hostname, online: true } : { online: false },
     });
   } catch (err) {
     return NextResponse.json({ success: false, error: String(err) }, { status: 500 });

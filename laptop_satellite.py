@@ -15,7 +15,9 @@ Configuración (.env de la laptop o variables de entorno):
 """
 
 import base64
+import hmac
 import json
+import queue
 import struct
 import os
 import threading
@@ -29,6 +31,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 PROJECT_DIR = Path(__file__).resolve().parent
@@ -57,6 +60,7 @@ SERVER_URL = cfg("JEARVIS_SERVER_URL", "http://127.0.0.1:3000").rstrip("/")
 AUTH_TOKEN = cfg("STARK_AUTH_TOKEN")
 TV_IP = cfg("JEARVIS_TV_IP", "192.168.1.54:5555")
 TV_BROADCAST = cfg("JEARVIS_TV_BROADCAST", "192.168.1.255")
+TV_MAC_DEFAULT = cfg("JEARVIS_TV_MAC", "44:0f:b4:12:fa:ee")
 POLL_SECONDS = float(cfg("JEARVIS_POLL_SECONDS", "1.5"))
 
 # Lista blanca de aplicaciones que el VPS puede abrir/cerrar (alias → binarios candidatos)
@@ -175,27 +179,30 @@ def get_system_telemetry() -> dict:
         "ramTotalMb": ram_total,
         "batteryPct": battery,
         "tvConnected": tv_connected,
+        "lanUrl": f"http://{get_local_ip()}:{LAN_PORT}",
     }
 
 
 def send_wol(mac: str) -> None:
-    clean = mac.replace(":", "").replace("-", "")
+    """Paquete mágico Wake-on-LAN. Probado con la TCL: por Wi-Fi solo despierta con el envío
+    UNICAST a su IP (el broadcast solo no basta). Se mandan ambos, varias veces."""
+    clean = (mac or "").replace(":", "").replace("-", "")
     if len(clean) != 12:
         return
     packet = b"\xff" * 6 + bytes.fromhex(clean) * 16
+    tv_host = TV_IP.split(":")[0]
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     for _ in range(3):
-        for host, port in ((TV_BROADCAST, 9), (TV_BROADCAST, 7), ("255.255.255.255", 9)):
-            try:
-                s.sendto(packet, (host, port))
-            except Exception:
-                pass
-        time.sleep(0.06)
+        for host in (tv_host, TV_BROADCAST, "255.255.255.255"):
+            for port in (9, 7, 40000):
+                try:
+                    s.sendto(packet, (host, port))
+                except OSError:
+                    pass
+        time.sleep(0.25)
     s.close()
 
-
-# ---------- TV (ADB en la LAN de casa) ----------
 def tv_device_state() -> str:
     try:
         r = subprocess.run(["adb", "devices"], capture_output=True, text=True, timeout=4)
@@ -294,25 +301,39 @@ def tv_power(state: str, mac: str):
         ok, _ = tv_adb("input keyevent 224")  # WAKEUP: solo enciende
         if ok:
             return True
-        log("📺 TV sin respuesta: enviando Wake-on-LAN...")
-        for _ in range(8):  # hasta ~16 s para que el Wi-Fi de la TV despierte
-            send_wol(mac or "44:0f:b4:12:fa:ee")
-            time.sleep(2)
+        log("📺 TV en reposo: enviando Wake-on-LAN (tarda ~20 s en despertar)...")
+        t0 = time.time()
+        next_wol = 0.0
+        while time.time() - t0 < 45:
+            if time.time() >= next_wol:
+                send_wol(mac or TV_MAC_DEFAULT)
+                next_wol = time.time() + 5
             if tv_reachable(1.0):
-                ok, _ = tv_adb("input keyevent 224")
-                if ok:
-                    log("📺 TV encendida por Wake-on-LAN")
-                    return True
+                time.sleep(2.5)  # Android termina de levantar ADB
+                for _ in range(4):
+                    if tv_reconnect(force=True):
+                        ok, _ = tv_adb("input keyevent 224")
+                        if ok:
+                            log(f"📺 TV encendida por Wake-on-LAN en {time.time() - t0:.0f}s")
+                            return True
+                    time.sleep(1.5)
+            time.sleep(1)
         log("❌ La TV no respondió (ni ADB ni Wake-on-LAN)")
         return False
+    if not tv_reachable():
+        log("📺 La TV ya estaba apagada (en reposo, fuera de la red)")
+        return True
     awake = tv_is_awake()
     if awake is True:
         tv_adb("input keyevent 26")  # POWER: solo si está encendida, así nunca la enciende por error
+        log("📺 TV apagada")
+    elif awake is False:
+        log("📺 La TV ya estaba apagada")
     return awake is not None
 
 
 # ---------- Vista en vivo (pantalla / webcam / TV) ----------
-LIVE_MIN_INTERVAL = {"screen": 0.6, "webcam": 0.9, "tv": 1.2}
+LIVE_MIN_INTERVAL = {"screen": 0.25, "webcam": 0.5, "tv": 1.2}
 _wanted_sources = set()
 _wanted_lock = threading.Lock()
 _monitor_cache = {"t": 0.0, "mon": (0, 0, 1920, 1080)}
@@ -343,12 +364,20 @@ def capture_frame(source: str):
     return None
 
 
+_local_wanted = {}   # fuente -> último pedido directo por la red de casa
+_local_frames = {}   # fuente -> (timestamp_ms, jpeg)
+
+
 def vision_worker():
-    """Hilo: mientras el teléfono mire una fuente, la captura y la sube al VPS."""
+    """Hilo: mientras el teléfono mire una fuente (por el VPS o directo en casa), la captura.
+    Se sube al VPS solo si la pidió por internet."""
     last = {}
     while True:
+        now = time.time()
         with _wanted_lock:
-            sources = list(_wanted_sources)
+            remote = set(_wanted_sources)
+            local = {k for k, t in _local_wanted.items() if now - t < 6}
+            sources = list(remote | local)
         if not sources:
             time.sleep(0.3)
             continue
@@ -358,8 +387,10 @@ def vision_worker():
             last[src] = time.time()
             data = capture_frame(src)
             if data:
-                b64 = base64.b64encode(data).decode("ascii")
-                make_request("/api/satellite", {"frame": {"source": src, "image": "data:image/jpeg;base64," + b64}})
+                _local_frames[src] = (int(time.time() * 1000), data)
+                if src in remote:
+                    b64 = base64.b64encode(data).decode("ascii")
+                    make_request("/api/satellite", {"frame": {"source": src, "image": "data:image/jpeg;base64," + b64}})
         time.sleep(0.05)
 
 
@@ -683,6 +714,117 @@ def execute_local_command(cmd: dict) -> bool:
     return False
 
 
+# ---------- Servidor en la red de casa (trackpad y vista en vivo SIN pasar por internet) ----------
+LAN_PORT = int(cfg("JEARVIS_LAN_PORT", "8765"))
+
+
+class LanHandler(BaseHTTPRequestHandler):
+    server_version = "TARS-Satellite"
+
+    def log_message(self, *args):  # silencioso
+        pass
+
+    def _cors(self):
+        # La APK carga el HUD desde file:// (origen "null"); el token protege igual
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Stark-Token")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+
+    def _json(self, code, obj):
+        body = json.dumps(obj).encode()
+        self.send_response(code)
+        self._cors()
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _authorized(self):
+        tok = self.headers.get("X-Stark-Token", "")
+        return bool(AUTH_TOKEN) and hmac.compare_digest(tok.encode(), AUTH_TOKEN.encode())
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self._cors()
+        self.end_headers()
+
+    def do_GET(self):
+        url = urllib.parse.urlparse(self.path)
+        if url.path == "/health":
+            return self._json(200, {"ok": True, "name": "tars-satellite", "host": socket.gethostname()})
+        if not self._authorized():
+            return self._json(401, {"success": False, "error": "No autorizado"})
+        if url.path == "/frame":
+            q = urllib.parse.parse_qs(url.query)
+            src = (q.get("source") or ["screen"])[0]
+            if src not in LIVE_MIN_INTERVAL:
+                return self._json(400, {"success": False, "error": "fuente inválida"})
+            since = int((q.get("since") or ["0"])[0] or 0)
+            with _wanted_lock:
+                _local_wanted[src] = time.time()
+            f = _local_frames.get(src)
+            if not f or time.time() * 1000 - f[0] > 15000:
+                return self._json(200, {"success": False, "waiting": True, "error": "Capturando..."})
+            if since and f[0] <= since:
+                return self._json(200, {"success": True, "unchanged": True, "timestamp": f[0]})
+            return self._json(200, {"success": True, "timestamp": f[0],
+                                    "imageBase64": "data:image/jpeg;base64," + base64.b64encode(f[1]).decode("ascii")})
+        return self._json(404, {"success": False})
+
+    def do_POST(self):
+        if not self._authorized():
+            return self._json(401, {"success": False, "error": "No autorizado"})
+        try:
+            n = min(int(self.headers.get("Content-Length", "0")), 100_000)
+            body = json.loads(self.rfile.read(n) or b"{}")
+        except Exception:
+            return self._json(400, {"success": False, "error": "JSON inválido"})
+        path = urllib.parse.urlparse(self.path).path
+        if path in ("/input", "/tap"):
+            payload = dict(body)
+            if path == "/tap":
+                payload["action"] = "tap"
+            payload["target"] = "tv" if payload.get("target") == "tv" else "pc"
+            if payload["target"] == "tv":
+                _tv_queue.put({"action": "input", "payload": payload})
+                return self._json(200, {"success": True, "queued": True})
+            try:
+                ok = execute_input(payload)
+            except Exception as e:
+                return self._json(500, {"success": False, "error": str(e)})
+            return self._json(200, {"success": ok})
+        return self._json(404, {"success": False})
+
+
+def start_lan_server():
+    try:
+        srv = ThreadingHTTPServer(("0.0.0.0", LAN_PORT), LanHandler)
+        srv.daemon_threads = True
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        log(f"🏠 Modo casa: trackpad y vista en vivo directos en http://{get_local_ip()}:{LAN_PORT}")
+    except OSError as e:
+        log(f"⚠️ No se pudo abrir el puerto local {LAN_PORT}: {e}")
+
+
+# Las órdenes de TV pueden tardar (despertar ~20 s, capturas, esperas de YouTube):
+# van a su propio hilo, en orden, sin bloquear el mouse ni el resto de órdenes.
+_tv_queue: "queue.Queue[dict]" = queue.Queue()
+
+
+def tv_worker():
+    while True:
+        cmd = _tv_queue.get()
+        try:
+            execute_local_command(cmd)
+        except Exception as e:
+            log(f"❌ Error ejecutando {cmd.get('action')}: {e}")
+
+
+def is_tv_command(cmd: dict) -> bool:
+    a = str(cmd.get("action", ""))
+    return a.startswith("tv_") or (a == "input" and (cmd.get("payload") or {}).get("target") == "tv")
+
+
 def main() -> None:
     is_local = SERVER_URL.startswith(("http://127.0.0.1", "http://localhost"))
     if not AUTH_TOKEN:
@@ -694,6 +836,8 @@ def main() -> None:
 
     log(f"🛰️ Satélite conectado a {SERVER_URL}. Esperando órdenes...")
     threading.Thread(target=vision_worker, daemon=True).start()
+    threading.Thread(target=tv_worker, daemon=True).start()
+    start_lan_server()
     last_telemetry = 0.0
     interactive = False
     while True:
@@ -709,6 +853,9 @@ def main() -> None:
                 _wanted_sources.update(s for s in (resp.get("vision") or []) if s in LIVE_MIN_INTERVAL)
             interactive = bool(resp.get("interactive"))
             for cmd in resp.get("commands") or []:
+                if is_tv_command(cmd):
+                    _tv_queue.put(cmd)
+                    continue
                 try:
                     execute_local_command(cmd)
                 except Exception as e:
