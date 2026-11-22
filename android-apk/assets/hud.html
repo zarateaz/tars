@@ -2554,7 +2554,7 @@ function setTrackpadMode(mode) {
 let isFetchingVision = false;
 let lastFrameTs = 0;
 let lastFrameSource = "";
-function setLiveStatus(text) {
+function setLiveStatus(text, action) {
   const img = document.getElementById("liveScreenImg");
   if (!img) return;
   let st = document.getElementById("liveStatusMsg");
@@ -2565,6 +2565,14 @@ function setLiveStatus(text) {
     img.insertAdjacentElement("afterend", st);
   }
   st.textContent = text || "";
+  if (text && action) {
+    const b = document.createElement("button");
+    b.className = "chip";
+    b.style.cssText = "margin:6px auto 0;display:block";
+    b.textContent = action.label;
+    b.onclick = () => { b.disabled = true; b.textContent = "⏳ Encendiendo (~30 s)..."; sendCommand(action.cmd); };
+    st.appendChild(b);
+  }
   st.style.display = text ? "block" : "none";
 }
 async function fetchLiveVisionFrame() {
@@ -2579,12 +2587,14 @@ async function fetchLiveVisionFrame() {
       : await fetch(activeServer + "/api/live-vision?source=" + src + "&since=" + lastFrameTs, { signal: AbortSignal.timeout(8000) });
     if (r.ok) {
       const j = await r.json();
-      if (j.success && j.imageBase64) {
+      if (j.status === "tv_off") {
+        setLiveStatus("📺 La TV está apagada.", { label: "⚡ ENCENDER TV", cmd: "enciende la tele" });
+      } else if (j.success && j.imageBase64) {
         document.getElementById("liveScreenImg").src = j.imageBase64;
         lastFrameTs = j.timestamp || Date.now();
-        setLiveStatus("");
+        setLiveStatus(j.status === "dark" ? "📷 La imagen está casi negra: la cámara está tapada o a oscuras." : "");
       } else if (j.success && j.unchanged) {
-        setLiveStatus("");
+        setLiveStatus(j.status === "dark" ? "📷 La imagen está casi negra: la cámara está tapada o a oscuras." : "");
       } else if (j.waiting) {
         setLiveStatus(src === "tv" ? "⏳ Capturando la TV (tarda unos 5 s)..." : "⏳ " + (j.error || "Esperando imagen de la laptop..."));
       }

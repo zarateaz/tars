@@ -345,10 +345,20 @@ def capture_frame(source: str):
             r = subprocess.run(["grim", "-s", "0.5", "-t", "jpeg", "-q", "55", "-"], capture_output=True, timeout=4)
             return r.stdout if r.returncode == 0 and r.stdout else None
         if source == "webcam":
+            # Saltar los primeros fotogramas: la autoexposición tarda en ajustarse (el 1º sale negro)
             r = subprocess.run(["ffmpeg", "-loglevel", "error", "-f", "v4l2", "-video_size", "640x480", "-i", "/dev/video0",
-                                "-frames:v", "1", "-f", "image2pipe", "-vcodec", "mjpeg", "-"], capture_output=True, timeout=6)
-            return r.stdout if r.returncode == 0 and r.stdout else None
+                                "-vf", "select=gte(n\\,8)", "-frames:v", "1", "-f", "image2pipe", "-vcodec", "mjpeg", "-"],
+                               capture_output=True, timeout=8)
+            if r.returncode != 0 or not r.stdout:
+                _live_status["webcam"] = "error"
+                return None
+            _live_status["webcam"] = "dark" if is_dark_jpeg(r.stdout) else "ok"
+            return r.stdout
         if source == "tv":
+            if not tv_reachable(1.2):
+                _live_status["tv"] = "tv_off"
+                return None
+            _live_status["tv"] = "ok"
             tv_reconnect()
             local_png = "/tmp/tars_tv_cap.png"
             if _tv_run(["shell", "screencap", "-p", "/sdcard/tars_cap.png"], 15).returncode != 0:
@@ -368,30 +378,63 @@ _local_wanted = {}   # fuente -> último pedido directo por la red de casa
 _local_frames = {}   # fuente -> (timestamp_ms, jpeg)
 
 
-def vision_worker():
-    """Hilo: mientras el teléfono mire una fuente (por el VPS o directo en casa), la captura.
-    Se sube al VPS solo si la pidió por internet."""
-    last = {}
+_live_status = {}  # fuente -> ok | tv_off | dark | error
+
+
+def is_dark_jpeg(data: bytes) -> bool:
+    """¿Imagen casi negra? (cámara tapada o a oscuras). Requiere Pillow; si no está, asume que no."""
+    try:
+        from io import BytesIO
+        from PIL import Image, ImageStat
+        im = Image.open(BytesIO(data)).convert("L").resize((64, 48))
+        return ImageStat.Stat(im).mean[0] < 12
+    except Exception:
+        return False
+
+
+def _capture_loop(src: str, remote_ref: dict):
+    """Un hilo por fuente: si la TV tarda, la pantalla y la webcam no se congelan."""
+    last_status_sent = None
     while True:
         now = time.time()
         with _wanted_lock:
-            remote = set(_wanted_sources)
-            local = {k for k, t in _local_wanted.items() if now - t < 6}
-            sources = list(remote | local)
-        if not sources:
-            time.sleep(0.3)
-            continue
-        for src in sources:
-            if time.time() - last.get(src, 0) < LIVE_MIN_INTERVAL.get(src, 1.0):
-                continue
-            last[src] = time.time()
-            data = capture_frame(src)
+            want_local = now - _local_wanted.get(src, 0) < 6
+            want_remote = src in _wanted_sources
+        if not (want_local or want_remote):
+            _capture_threads.pop(src, None)
+            return
+        t0 = time.time()
+        data = capture_frame(src)
+        status = _live_status.get(src, "ok" if data else "error")
+        if data:
+            _local_frames[src] = (int(time.time() * 1000), data)
+        if want_remote:
             if data:
-                _local_frames[src] = (int(time.time() * 1000), data)
-                if src in remote:
-                    b64 = base64.b64encode(data).decode("ascii")
-                    make_request("/api/satellite", {"frame": {"source": src, "image": "data:image/jpeg;base64," + b64}})
-        time.sleep(0.05)
+                b64 = base64.b64encode(data).decode("ascii")
+                make_request("/api/satellite", {"frame": {"source": src, "image": "data:image/jpeg;base64," + b64, "status": status}})
+            elif status != last_status_sent:
+                make_request("/api/satellite", {"frame": {"source": src, "status": status}})
+            last_status_sent = status
+        wait = LIVE_MIN_INTERVAL.get(src, 1.0) - (time.time() - t0)
+        time.sleep(max(0.05, wait if data else 2.0))
+
+
+_capture_threads = {}
+
+
+def vision_worker():
+    """Arranca un hilo de captura por cada fuente que el teléfono esté mirando."""
+    while True:
+        now = time.time()
+        with _wanted_lock:
+            sources = set(_wanted_sources) | {k for k, t in _local_wanted.items() if now - t < 6}
+        for src in sources:
+            th = _capture_threads.get(src)
+            if th is None or not th.is_alive():
+                th = threading.Thread(target=_capture_loop, args=(src, {}), daemon=True)
+                _capture_threads[src] = th
+                th.start()
+        time.sleep(0.3)
 
 
 class VirtualInput:
@@ -763,11 +806,14 @@ class LanHandler(BaseHTTPRequestHandler):
             with _wanted_lock:
                 _local_wanted[src] = time.time()
             f = _local_frames.get(src)
+            st = _live_status.get(src, "ok")
+            if st == "tv_off":
+                return self._json(200, {"success": False, "status": "tv_off", "error": "La TV está apagada"})
             if not f or time.time() * 1000 - f[0] > 15000:
-                return self._json(200, {"success": False, "waiting": True, "error": "Capturando..."})
+                return self._json(200, {"success": False, "waiting": True, "status": st, "error": "Capturando..."})
             if since and f[0] <= since:
-                return self._json(200, {"success": True, "unchanged": True, "timestamp": f[0]})
-            return self._json(200, {"success": True, "timestamp": f[0],
+                return self._json(200, {"success": True, "unchanged": True, "timestamp": f[0], "status": st})
+            return self._json(200, {"success": True, "timestamp": f[0], "status": st,
                                     "imageBase64": "data:image/jpeg;base64," + base64.b64encode(f[1]).decode("ascii")})
         return self._json(404, {"success": False})
 

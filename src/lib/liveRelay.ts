@@ -14,6 +14,7 @@ export interface LiveFrame {
 
 interface RelayState {
   frames: Map<string, LiveFrame>;
+  status?: Map<string, { status: string; ts: number }>;
   wanted: Map<string, number>;
   lastInputAt: number;
 }
@@ -45,6 +46,18 @@ export function storeFrame(source: string, image: string, width = 0, height = 0)
   if (typeof image !== "string" || !image.startsWith("data:image/jpeg;base64,") || image.length > 3_000_000) return false;
   state.frames.set(source, { image, ts: Date.now(), width, height });
   return true;
+}
+
+/** Estado de la fuente reportado por la laptop: ok | tv_off | dark | error */
+export function storeStatus(source: string, status: string): void {
+  if (!(LIVE_SOURCES as readonly string[]).includes(source)) return;
+  if (!state.status) state.status = new Map();
+  state.status.set(source, { status: String(status).slice(0, 16), ts: Date.now() });
+}
+
+export function getStatus(source: string): string {
+  const st = state.status?.get(source);
+  return st && Date.now() - st.ts < 20000 ? st.status : "";
 }
 
 export function markInput(): void {

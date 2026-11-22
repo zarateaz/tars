@@ -6,7 +6,7 @@ import {
   getSatelliteTelemetry,
   enqueueSatelliteCommand,
 } from "@/lib/satelliteQueue";
-import { wantedSources, isInteractive, storeFrame } from "@/lib/liveRelay";
+import { wantedSources, isInteractive, storeFrame, storeStatus } from "@/lib/liveRelay";
 
 export async function GET(req: Request) {
   if (!verifyStarkAuth(req)) {
@@ -45,6 +45,8 @@ export async function POST(req: Request) {
 
     // 1b. Fotograma en vivo subido por la laptop
     if (body.frame && typeof body.frame === "object") {
+      if (body.frame.status) storeStatus(String(body.frame.source || ""), String(body.frame.status));
+      if (!body.frame.image) return NextResponse.json({ success: true });
       const ok = storeFrame(String(body.frame.source || ""), String(body.frame.image || ""), Number(body.frame.width) || 0, Number(body.frame.height) || 0);
       return NextResponse.json({ success: ok });
     }

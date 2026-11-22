@@ -1,5 +1,5 @@
 import { IS_CLOUD } from "@/lib/system";
-import { requestFrame, markInput } from "@/lib/liveRelay";
+import { requestFrame, markInput, getStatus } from "@/lib/liveRelay";
 import { enqueueSatelliteCommand } from "@/lib/satelliteQueue";
 import { NextResponse } from "next/server";
 import { execFile } from "child_process";
@@ -27,6 +27,10 @@ export async function GET(req: Request) {
     // Nube: la imagen la captura y sube el satélite de la laptop
     if (IS_CLOUD) {
       const f = requestFrame(source);
+      const status = getStatus(source);
+      if (status === "tv_off") {
+        return NextResponse.json({ success: false, status, error: "La TV está apagada" });
+      }
       if (!f) {
         return NextResponse.json({
           success: false,
@@ -37,9 +41,9 @@ export async function GET(req: Request) {
       // Solo enviar la imagen si es más nueva que la que ya tiene el teléfono (ahorra datos móviles)
       const since = Number(url.searchParams.get("since") || 0);
       if (since && f.ts <= since) {
-        return NextResponse.json({ success: true, unchanged: true, source, timestamp: f.ts });
+        return NextResponse.json({ success: true, unchanged: true, source, timestamp: f.ts, status });
       }
-      return NextResponse.json({ success: true, source, width: f.width, height: f.height, imageBase64: f.image, timestamp: f.ts });
+      return NextResponse.json({ success: true, source, width: f.width, height: f.height, imageBase64: f.image, timestamp: f.ts, status });
     }
 
     if (source === "webcam") {
